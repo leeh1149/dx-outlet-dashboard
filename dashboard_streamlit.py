@@ -687,12 +687,20 @@ if df is not None:
                     y_title = '평균 매출 (억원)'
                     chart_title = 'SS 시즌 평균 매출 현황 (높은 매출 순) - 🔥 디스커버리 강조'
                 
+                # 디스커버리 브랜드 텍스트 굵게 표시
+                brand_labels = [f"<b>{brand}</b>" if brand == '디스커버리' else brand for brand in brand_df['브랜드']]
+                
                 fig_ms.update_layout(
                     title=chart_title,
                     xaxis_title='브랜드',
                     yaxis_title=y_title,
                     barmode='group',
-                    height=500
+                    height=500,
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=list(range(len(brand_df))),
+                        ticktext=brand_labels
+                    )
                 )
                 
                 st.plotly_chart(fig_ms, use_container_width=True)
@@ -854,12 +862,20 @@ if df is not None:
                     y_title = '평균 매출 (억원)'
                     chart_title = 'FW 시즌 평균 매출 현황 (높은 매출 순) - 🔥 디스커버리 강조'
                 
+                # 디스커버리 브랜드 텍스트 굵게 표시
+                brand_labels = [f"<b>{brand}</b>" if brand == '디스커버리' else brand for brand in brand_df['브랜드']]
+                
                 fig_ms.update_layout(
                     title=chart_title,
                     xaxis_title='브랜드',
                     yaxis_title=y_title,
                     barmode='group',
-                    height=500
+                    height=500,
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=list(range(len(brand_df))),
+                        ticktext=brand_labels
+                    )
                 )
                 
                 st.plotly_chart(fig_ms, use_container_width=True)
