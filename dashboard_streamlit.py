@@ -315,10 +315,7 @@ if df is not None:
         discovery_count = len(filtered_df[filtered_df['브랜드'] == '디스커버리'])
         st.metric("디스커버리 건수", discovery_count)
     
-    # 탭 생성
-    tab1, tab2, tab3 = st.tabs(["🏪 아울렛 동향", "📊 매장 효율", "🤖 AI 분석"])
-    
-    with tab1:
+    # 아울렛 동향 섹션
             st.markdown('<h2 class="section-header">🏪 아울렛 동향</h2>', unsafe_allow_html=True)
             
             # 아울렛 매출 흐름 - 디스커버리
@@ -939,7 +936,7 @@ if df is not None:
                 
                 # HTML로 표시하여 색상이 적용되도록 함
                 st.markdown(ms_table.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
+        
             # 아울렛 매장당 효율 분석
             st.subheader("🏪 아울렛 매장당 효율")
             
@@ -1094,245 +1091,245 @@ if df is not None:
             else:
                 st.warning("디스커버리 브랜드 데이터가 없습니다.")
     
-    with tab2:
-        st.markdown('<h2 class="section-header">📊 매장 효율</h2>', unsafe_allow_html=True)
-        
-        # 매장 효율 분석
-        st.subheader("🚀 디스커버리 매장 효율 분석")
-        
-        # 효율성 데이터 계산
-        efficiency_df = calculate_efficiency_data(df)
-        
-        if not efficiency_df.empty:
-            # 시즌 선택
-            season_type = st.radio("시즌 선택", ["SS", "FW"], horizontal=True)
+    # 매장 효율 섹션
+            st.markdown('<h2 class="section-header">📊 매장 효율</h2>', unsafe_allow_html=True)
             
-            # 매출기준 선택
-            sales_criteria = st.radio("매출기준 선택", ["매출순", "평당매출순"], horizontal=True)
+            # 매장 효율 분석
+            st.subheader("🚀 디스커버리 매장 효율 분석")
             
-            if season_type == "SS":
-                current_season = "25SS"
-                prev_season = "24SS"
-                season_label = "SS"
-            else:
-                current_season = "24FW"
-                prev_season = "23FW"
-                season_label = "FW"
+            # 효율성 데이터 계산
+            efficiency_df = calculate_efficiency_data(df)
             
-            # 시즌별 데이터 준비
-            season_df = efficiency_df.copy()
-            season_df['현재시즌_매출'] = season_df[f'{current_season}_매출액']
-            season_df['현재시즌_효율성'] = season_df[f'{current_season}_효율성']
-            season_df['전년시즌_매출'] = season_df[f'{prev_season}_매출액']
-            season_df['전년시즌_효율성'] = season_df[f'{prev_season}_효율성']
-            
-            # 전년비 계산
-            season_df['매출_전년비'] = season_df.apply(
-                lambda row: ((row['현재시즌_매출'] - row['전년시즌_매출']) / row['전년시즌_매출'] * 100) 
-                if row['전년시즌_매출'] > 0 else 0, axis=1
-            )
-            season_df['효율성_전년비'] = season_df.apply(
-                lambda row: ((row['현재시즌_효율성'] - row['전년시즌_효율성']) / row['전년시즌_효율성'] * 100) 
-                if row['전년시즌_효율성'] > 0 else 0, axis=1
-            )
-            
-            # 매장명에 면적 표시 추가
-            season_df['매장명_면적'] = season_df.apply(
-                lambda row: f"{row['매장명']} ({row['매장면적_평']:.1f}평)", axis=1
-            )
-            
-            # 매출기준에 따라 정렬
-            if sales_criteria == "매출순":
-                season_df = season_df.sort_values('현재시즌_매출', ascending=False).reset_index(drop=True)
-            else:  # 평당매출순
-                season_df = season_df.sort_values('현재시즌_효율성', ascending=False).reset_index(drop=True)
-            
-            # 전년 순위 계산 (매출기준에 따라)
-            prev_year_df = season_df.copy()
-            if sales_criteria == "매출순":
-                prev_year_df = prev_year_df.sort_values('전년시즌_매출', ascending=False).reset_index(drop=True)
-            else:  # 평당매출순
-                prev_year_df = prev_year_df.sort_values('전년시즌_효율성', ascending=False).reset_index(drop=True)
-            prev_year_df['prev_rank'] = range(1, len(prev_year_df) + 1)
-            
-            # 현재 순위와 전년 순위 매핑
-            current_rank = range(1, len(season_df) + 1)
-            rank_mapping = dict(zip(season_df['매장명'], current_rank))
-            prev_rank_mapping = dict(zip(prev_year_df['매장명'], prev_year_df['prev_rank']))
-            
-            # 순위 증감 계산
-            def format_rank_change(store_name):
-                current = rank_mapping[store_name]
-                prev = prev_rank_mapping[store_name]
-                change = prev - current
+            if not efficiency_df.empty:
+                # 시즌 선택
+                season_type = st.radio("시즌 선택", ["SS", "FW"], horizontal=True)
                 
-                if change > 0:
-                    return f"{current}<span style='color: #0066cc; font-weight: bold;'>(▲{change})</span>"
-                elif change < 0:
-                    return f"{current}<span style='color: #cc0000; font-weight: bold;'>(▼{abs(change)})</span>"
+                # 매출기준 선택
+                sales_criteria = st.radio("매출기준 선택", ["매출순", "평당매출순"], horizontal=True)
+                
+                if season_type == "SS":
+                    current_season = "25SS"
+                    prev_season = "24SS"
+                    season_label = "SS"
                 else:
-                    return f"{current}(-)"
-            
-            # BEST 5, WORST 5 표시
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("🏆 BEST 5")
-                best_5 = season_df.head(5)
-                best_data = []
-                for idx, row in best_5.iterrows():
-                    best_data.append({
-                        '순위': f"{idx + 1}위",
-                        '매장명': row['매장명_면적'],
-                        '유통사': row['유통사'],
-                        f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
-                        '평당매출': format_efficiency_to_million(row['현재시즌_효율성'])
-                    })
-                best_df = pd.DataFrame(best_data)
-                st.dataframe(best_df, use_container_width=True)
-            
-            with col2:
-                st.subheader("📉 WORST 5")
-                worst_5 = season_df.tail(5)
-                worst_data = []
-                for i, (idx, row) in enumerate(worst_5.iterrows()):
-                    worst_data.append({
-                        '순위': f"{len(season_df) - 4 + i}위",
-                        '매장명': row['매장명_면적'],
-                        '유통사': row['유통사'],
-                        f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
-                        '평당매출': format_efficiency_to_million(row['현재시즌_효율성'])
-                    })
-                worst_df = pd.DataFrame(worst_data)
-                st.dataframe(worst_df, use_container_width=True)
-            
-            # 전년비 요약
-            st.subheader(f"📊 {season_label} 시즌 전년비 요약")
-            
-            summary_data = []
-            for idx, row in season_df.iterrows():
-                summary_data.append({
-                    '순위': format_rank_change(row['매장명']),
-                    '매장명': row['매장명_면적'],
-                    '유통사': row['유통사'],
-                    f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
-                    f'{prev_season} 매출': format_to_hundred_million(row['전년시즌_매출']),
-                    '매출 전년비': format_growth_with_color(row['매출_전년비']),
-                    f'{current_season} 평당매출': format_efficiency_to_million(row['현재시즌_효율성']),
-                    f'{prev_season} 평당매출': format_efficiency_to_million(row['전년시즌_효율성']),
-                    '평당매출 전년비': format_growth_with_color(row['효율성_전년비'])
-                })
-            
-            summary_df = pd.DataFrame(summary_data)
-            # HTML로 표시하여 색상이 적용되도록 함
-            st.markdown(summary_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
-        else:
-            st.warning("디스커버리 브랜드 데이터가 없습니다.")
-    
-    with tab3:
-        st.markdown('<h2 class="section-header">🤖 AI 분석</h2>', unsafe_allow_html=True)
-        
-        if api_key:
-            # AI 분석 결과 표시
-            if analyze_outlet:
-                st.markdown("### 📊 아울렛 동향 AI 분석")
+                    current_season = "24FW"
+                    prev_season = "23FW"
+                    season_label = "FW"
                 
-                # 디스커버리 데이터 준비
-                discovery_data = filtered_df[filtered_df['브랜드'] == '디스커버리']
-                efficiency_data = calculate_efficiency_data(filtered_df)
-                
-                if not discovery_data.empty:
-                    with st.spinner("AI가 아울렛 동향을 분석하고 있습니다..."):
-                        analysis_prompt = analyze_outlet_trends(discovery_data, efficiency_data)
-                        ai_response = call_jemini_api(api_key, analysis_prompt)
-                    
-                    # 분석 결과 표시 박스
-                    st.markdown("""
-                    <div style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        padding: 20px;
-                        border-radius: 10px;
-                        margin: 20px 0;
-                        color: white;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    ">
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown("**🤖 AI 분석 결과**")
-                    st.markdown(ai_response)
-                    
-                    st.markdown("</div>", unsafe_allow_html=True)
-                else:
-                    st.warning("디스커버리 데이터가 없어 분석할 수 없습니다.")
-            
-            elif analyze_peer:
-                st.markdown("### 🏢 동업계 MS 현황 AI 분석")
-                
-                # 브랜드별 데이터 준비
-                brand_df = filtered_df.groupby('브랜드').agg({
-                    '25SS': 'sum',
-                    '24SS': 'sum',
-                    '24FW': 'sum',
-                    '23FW': 'sum'
-                }).reset_index()
+                # 시즌별 데이터 준비
+                season_df = efficiency_df.copy()
+                season_df['현재시즌_매출'] = season_df[f'{current_season}_매출액']
+                season_df['현재시즌_효율성'] = season_df[f'{current_season}_효율성']
+                season_df['전년시즌_매출'] = season_df[f'{prev_season}_매출액']
+                season_df['전년시즌_효율성'] = season_df[f'{prev_season}_효율성']
                 
                 # 전년비 계산
-                brand_df['SS_전년비'] = ((brand_df['25SS'] - brand_df['24SS']) / brand_df['24SS'] * 100).round(1)
-                brand_df['FW_전년비'] = ((brand_df['24FW'] - brand_df['23FW']) / brand_df['23FW'] * 100).round(1)
+                season_df['매출_전년비'] = season_df.apply(
+                    lambda row: ((row['현재시즌_매출'] - row['전년시즌_매출']) / row['전년시즌_매출'] * 100) 
+                    if row['전년시즌_매출'] > 0 else 0, axis=1
+                )
+                season_df['효율성_전년비'] = season_df.apply(
+                    lambda row: ((row['현재시즌_효율성'] - row['전년시즌_효율성']) / row['전년시즌_효율성'] * 100) 
+                    if row['전년시즌_효율성'] > 0 else 0, axis=1
+                )
                 
-                # SS 시즌 기준으로 정렬
-                brand_df = brand_df.sort_values('25SS', ascending=False).reset_index(drop=True)
+                # 매장명에 면적 표시 추가
+                season_df['매장명_면적'] = season_df.apply(
+                    lambda row: f"{row['매장명']} ({row['매장면적_평']:.1f}평)", axis=1
+                )
                 
-                if not brand_df.empty:
-                    with st.spinner("AI가 동업계 MS 현황을 분석하고 있습니다..."):
-                        analysis_prompt = analyze_peer_ms_status(brand_df)
-                        ai_response = call_jemini_api(api_key, analysis_prompt)
+                # 매출기준에 따라 정렬
+                if sales_criteria == "매출순":
+                    season_df = season_df.sort_values('현재시즌_매출', ascending=False).reset_index(drop=True)
+                else:  # 평당매출순
+                    season_df = season_df.sort_values('현재시즌_효율성', ascending=False).reset_index(drop=True)
+                
+                # 전년 순위 계산 (매출기준에 따라)
+                prev_year_df = season_df.copy()
+                if sales_criteria == "매출순":
+                    prev_year_df = prev_year_df.sort_values('전년시즌_매출', ascending=False).reset_index(drop=True)
+                else:  # 평당매출순
+                    prev_year_df = prev_year_df.sort_values('전년시즌_효율성', ascending=False).reset_index(drop=True)
+                prev_year_df['prev_rank'] = range(1, len(prev_year_df) + 1)
+                
+                # 현재 순위와 전년 순위 매핑
+                current_rank = range(1, len(season_df) + 1)
+                rank_mapping = dict(zip(season_df['매장명'], current_rank))
+                prev_rank_mapping = dict(zip(prev_year_df['매장명'], prev_year_df['prev_rank']))
+                
+                # 순위 증감 계산
+                def format_rank_change(store_name):
+                    current = rank_mapping[store_name]
+                    prev = prev_rank_mapping[store_name]
+                    change = prev - current
                     
-                    # 분석 결과 표시 박스
-                    st.markdown("""
-                    <div style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        padding: 20px;
-                        border-radius: 10px;
-                        margin: 20px 0;
-                        color: white;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    ">
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown("**🤖 AI 분석 결과**")
-                    st.markdown(ai_response)
-                    
-                    st.markdown("</div>", unsafe_allow_html=True)
-                else:
-                    st.warning("브랜드 데이터가 없어 분석할 수 없습니다.")
-            
+                    if change > 0:
+                        return f"{current}<span style='color: #0066cc; font-weight: bold;'>(▲{change})</span>"
+                    elif change < 0:
+                        return f"{current}<span style='color: #cc0000; font-weight: bold;'>(▼{abs(change)})</span>"
+                    else:
+                        return f"{current}(-)"
+                
+                # BEST 5, WORST 5 표시
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("🏆 BEST 5")
+                    best_5 = season_df.head(5)
+                    best_data = []
+                    for idx, row in best_5.iterrows():
+                        best_data.append({
+                            '순위': f"{idx + 1}위",
+                            '매장명': row['매장명_면적'],
+                            '유통사': row['유통사'],
+                            f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
+                            '평당매출': format_efficiency_to_million(row['현재시즌_효율성'])
+                        })
+                    best_df = pd.DataFrame(best_data)
+                    st.dataframe(best_df, use_container_width=True)
+                
+                with col2:
+                    st.subheader("📉 WORST 5")
+                    worst_5 = season_df.tail(5)
+                    worst_data = []
+                    for i, (idx, row) in enumerate(worst_5.iterrows()):
+                        worst_data.append({
+                            '순위': f"{len(season_df) - 4 + i}위",
+                            '매장명': row['매장명_면적'],
+                            '유통사': row['유통사'],
+                            f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
+                            '평당매출': format_efficiency_to_million(row['현재시즌_효율성'])
+                        })
+                    worst_df = pd.DataFrame(worst_data)
+                    st.dataframe(worst_df, use_container_width=True)
+                
+                # 전년비 요약
+                st.subheader(f"📊 {season_label} 시즌 전년비 요약")
+                
+                summary_data = []
+                for idx, row in season_df.iterrows():
+                    summary_data.append({
+                        '순위': format_rank_change(row['매장명']),
+                        '매장명': row['매장명_면적'],
+                        '유통사': row['유통사'],
+                        f'{current_season} 매출': format_to_hundred_million(row['현재시즌_매출']),
+                        f'{prev_season} 매출': format_to_hundred_million(row['전년시즌_매출']),
+                        '매출 전년비': format_growth_with_color(row['매출_전년비']),
+                        f'{current_season} 평당매출': format_efficiency_to_million(row['현재시즌_효율성']),
+                        f'{prev_season} 평당매출': format_efficiency_to_million(row['전년시즌_효율성']),
+                        '평당매출 전년비': format_growth_with_color(row['효율성_전년비'])
+                    })
+                
+                summary_df = pd.DataFrame(summary_data)
+                # HTML로 표시하여 색상이 적용되도록 함
+                st.markdown(summary_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+                
             else:
-                st.info("👆 사이드바에서 '아울렛 동향 AI 분석' 또는 '동업계 MS 현황 AI 분석' 버튼을 클릭하세요.")
-                
-                # 분석 안내
-                st.markdown("""
-                ### 📋 AI 분석 기능 안내
-                
-                **📊 아울렛 동향 AI 분석**
-                - 어떤 유통망에서 디스커버리가 매출이 잘 나오고 효율이 좋은지 분석
-                - 시즌별 매출 패턴과 유통사별 성과 차이 분석
-                - 효율성이 높은 매장들의 공통점 분석
-                - 개선 방안과 전략적 제안 제공
-                
-                **🏢 동업계 MS 현황 AI 분석**
-                - 전년 대비 디스커버리 매출 추이 분석
-                - 경쟁사 분석 및 잘 나가는 브랜드 파악
-                - 디스커버리의 시장 포지션과 경쟁력 평가
-                - 시장 기회와 위협 요소 분석
-                - 디스커버리 브랜드 강화 전략 제안
-                """)
-        else:
-            st.warning("🔑 재미나이 API 키를 입력하면 AI 분석을 사용할 수 있습니다.")
+                st.warning("디스커버리 브랜드 데이터가 없습니다.")
+        
+    # AI 분석 섹션
+            st.markdown('<h2 class="section-header">🤖 AI 분석</h2>', unsafe_allow_html=True)
             
-            st.markdown("""
-            ### 🔑 API 키 설정 방법
+            if api_key:
+                # AI 분석 결과 표시
+                if analyze_outlet:
+                    st.markdown("### 📊 아울렛 동향 AI 분석")
+                    
+                    # 디스커버리 데이터 준비
+                    discovery_data = filtered_df[filtered_df['브랜드'] == '디스커버리']
+                    efficiency_data = calculate_efficiency_data(filtered_df)
+                    
+                    if not discovery_data.empty:
+                        with st.spinner("AI가 아울렛 동향을 분석하고 있습니다..."):
+                            analysis_prompt = analyze_outlet_trends(discovery_data, efficiency_data)
+                            ai_response = call_jemini_api(api_key, analysis_prompt)
+                        
+                        # 분석 결과 표시 박스
+                        st.markdown("""
+                        <div style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            padding: 20px;
+                            border-radius: 10px;
+                            margin: 20px 0;
+                            color: white;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        ">
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown("**🤖 AI 분석 결과**")
+                        st.markdown(ai_response)
+                        
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("디스커버리 데이터가 없어 분석할 수 없습니다.")
+                
+                elif analyze_peer:
+                    st.markdown("### 🏢 동업계 MS 현황 AI 분석")
+                    
+                    # 브랜드별 데이터 준비
+                    brand_df = filtered_df.groupby('브랜드').agg({
+                        '25SS': 'sum',
+                        '24SS': 'sum',
+                        '24FW': 'sum',
+                        '23FW': 'sum'
+                    }).reset_index()
+                    
+                    # 전년비 계산
+                    brand_df['SS_전년비'] = ((brand_df['25SS'] - brand_df['24SS']) / brand_df['24SS'] * 100).round(1)
+                    brand_df['FW_전년비'] = ((brand_df['24FW'] - brand_df['23FW']) / brand_df['23FW'] * 100).round(1)
+                    
+                    # SS 시즌 기준으로 정렬
+                    brand_df = brand_df.sort_values('25SS', ascending=False).reset_index(drop=True)
+                    
+                    if not brand_df.empty:
+                        with st.spinner("AI가 동업계 MS 현황을 분석하고 있습니다..."):
+                            analysis_prompt = analyze_peer_ms_status(brand_df)
+                            ai_response = call_jemini_api(api_key, analysis_prompt)
+                        
+                        # 분석 결과 표시 박스
+                        st.markdown("""
+                        <div style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            padding: 20px;
+                            border-radius: 10px;
+                            margin: 20px 0;
+                            color: white;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        ">
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown("**🤖 AI 분석 결과**")
+                        st.markdown(ai_response)
+                        
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("브랜드 데이터가 없어 분석할 수 없습니다.")
+                
+                else:
+                    st.info("👆 사이드바에서 '아울렛 동향 AI 분석' 또는 '동업계 MS 현황 AI 분석' 버튼을 클릭하세요.")
+                    
+                    # 분석 안내
+                    st.markdown("""
+                    ### 📋 AI 분석 기능 안내
+                    
+                    **📊 아울렛 동향 AI 분석**
+                    - 어떤 유통망에서 디스커버리가 매출이 잘 나오고 효율이 좋은지 분석
+                    - 시즌별 매출 패턴과 유통사별 성과 차이 분석
+                    - 효율성이 높은 매장들의 공통점 분석
+                    - 개선 방안과 전략적 제안 제공
+                    
+                    **🏢 동업계 MS 현황 AI 분석**
+                    - 전년 대비 디스커버리 매출 추이 분석
+                    - 경쟁사 분석 및 잘 나가는 브랜드 파악
+                    - 디스커버리의 시장 포지션과 경쟁력 평가
+                    - 시장 기회와 위협 요소 분석
+                    - 디스커버리 브랜드 강화 전략 제안
+                    """)
+            else:
+                st.warning("🔑 재미나이 API 키를 입력하면 AI 분석을 사용할 수 있습니다.")
+                
+                st.markdown("""
+                ### 🔑 API 키 설정 방법
                 
                 1. [Google AI Studio](https://makersuite.google.com/app/apikey)에 접속
                 2. Google 계정으로 로그인
