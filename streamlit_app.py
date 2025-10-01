@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import numpy as np
 
 # 페이지 설정
 st.set_page_config(
-    page_title="DX OUTLET 매출 분석 대시보드",
+    page_title="DX OUTLET 매출 현황 대시보드",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -36,10 +35,59 @@ def load_data():
         st.error(f"데이터 로드 중 오류가 발생했습니다: {e}")
         return None
 
+# 디스커버리 매출 분석 함수
+def analyze_discovery_sales(df, season):
+    """디스커버리 브랜드의 유통사별 매출을 분석합니다."""
+    # 디스커버리 브랜드만 필터링
+    discovery_df = df[df['브랜드'] == '디스커버리'].copy()
+    
+    if season == 'SS':
+        current_col = '25SS'
+        previous_col = '24SS'
+    else:  # FW
+        current_col = '25FW'
+        previous_col = '24FW'
+    
+    # 유통사별 집계
+    discovery_summary = discovery_df.groupby('유통사').agg({
+        '매장명': 'count',
+        current_col: 'sum',
+        previous_col: 'sum'
+    }).reset_index()
+    
+    # 매장명을 매장수로 변경
+    discovery_summary = discovery_summary.rename(columns={'매장명': '매장수'})
+    
+    # 평균 매출 계산
+    discovery_summary[f'{current_col}_평균매출'] = discovery_summary[current_col] / discovery_summary['매장수']
+    discovery_summary[f'{previous_col}_평균매출'] = discovery_summary[previous_col] / discovery_summary['매장수']
+    
+    # 신장률 계산 (총 매출)
+    discovery_summary['총매출_신장률'] = ((discovery_summary[current_col] - discovery_summary[previous_col]) / discovery_summary[previous_col] * 100).round(1)
+    
+    # 신장률 계산 (평균 매출)
+    discovery_summary['평균매출_신장률'] = ((discovery_summary[f'{current_col}_평균매출'] - discovery_summary[f'{previous_col}_평균매출']) / discovery_summary[f'{previous_col}_평균매출'] * 100).round(1)
+    
+    # 순위 계산 (총 매출 기준)
+    discovery_summary = discovery_summary.sort_values(current_col, ascending=False).reset_index(drop=True)
+    discovery_summary['순위'] = discovery_summary.index + 1
+    
+    # 컬럼 순서 정리
+    result_columns = ['순위', '유통사', '매장수', f'{current_col}_총매출', f'{previous_col}_총매출', 
+                     '총매출_신장률', f'{current_col}_평균매출', f'{previous_col}_평균매출', '평균매출_신장률']
+    
+    discovery_summary = discovery_summary[result_columns]
+    
+    # 컬럼명 정리
+    discovery_summary.columns = ['순위', '유통사', '매장수', f'{season}시즌 총 매출', f'전년{season}시즌 총 매출', 
+                                '총매출 신장률', f'{season}시즌 평균매출', f'전년{season}시즌 평균매출', '평균매출 신장률']
+    
+    return discovery_summary
+
 # 메인 함수
 def main():
     # 헤더
-    st.title("📊 DX OUTLET 매출 분석 대시보드")
+    st.title("📊 DX OUTLET 매출 현황 대시보드")
     st.markdown("---")
     
     # 데이터 로드
@@ -47,192 +95,128 @@ def main():
     if df is None:
         st.stop()
     
-    # 사이드바 필터
-    st.sidebar.header("🔍 필터 옵션")
-    
-    # 유통사 필터
-    distributors = ['전체'] + sorted(df['유통사'].unique().tolist())
-    selected_distributor = st.sidebar.selectbox("유통사 선택", distributors)
-    
-    # 매장 필터
-    if selected_distributor != '전체':
-        store_options = ['전체'] + sorted(df[df['유통사'] == selected_distributor]['매장명'].unique().tolist())
-    else:
-        store_options = ['전체'] + sorted(df['매장명'].unique().tolist())
-    
-    selected_store = st.sidebar.selectbox("매장 선택", store_options)
-    
-    # 브랜드 필터
-    brand_options = ['전체'] + sorted(df['브랜드'].unique().tolist())
-    selected_brand = st.sidebar.selectbox("브랜드 선택", brand_options)
-    
-    # 데이터 필터링
-    filtered_df = df.copy()
-    
-    if selected_distributor != '전체':
-        filtered_df = filtered_df[filtered_df['유통사'] == selected_distributor]
-    
-    if selected_store != '전체':
-        filtered_df = filtered_df[filtered_df['매장명'] == selected_store]
-    
-    if selected_brand != '전체':
-        filtered_df = filtered_df[filtered_df['브랜드'] == selected_brand]
-    
-    # 메트릭 표시
-    st.subheader("📈 주요 지표")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        total_stores = len(filtered_df['매장명'].unique())
-        st.metric("총 매장 수", f"{total_stores}개")
-    
-    with col2:
-        total_brands = len(filtered_df['브랜드'].unique())
-        st.metric("총 브랜드 수", f"{total_brands}개")
-    
-    with col3:
-        total_sales_25ss = filtered_df['25SS'].sum()
-        st.metric("25SS 총 매출", f"{total_sales_25ss:,.0f}원")
-    
-    with col4:
-        avg_store_area = filtered_df['매장 면적'].mean()
-        if not pd.isna(avg_store_area):
-            st.metric("평균 매장 면적", f"{avg_store_area:.1f}㎡")
-        else:
-            st.metric("평균 매장 면적", "N/A")
+    # 시즌 선택
+    season = st.selectbox("시즌 선택", ['SS', 'FW'], key="season_selector")
     
     st.markdown("---")
     
-    # 탭으로 구분된 분석
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 시계열 분석", "🏪 매장별 분석", "🏷️ 브랜드별 분석", "📋 데이터 테이블"])
+    # 1. 아울렛 매출 현황 - 디스커버리
+    st.subheader("🏪 아울렛 매출 현황 - 디스커버리")
     
-    with tab1:
-        st.subheader("시계열 매출 분석")
-        
-        # 시계열 데이터 준비
-        sales_columns = ['23SS', '23FW', '24SS', '24FW', '25SS']
-        sales_data = filtered_df[sales_columns].sum()
-        
-        # 시계열 차트
-        fig = px.line(
-            x=['23SS', '23FW', '24SS', '24FW', '25SS'],
-            y=sales_data.values,
-            title="시계열별 총 매출 추이",
-            labels={'x': '시즌', 'y': '매출 (원)'}
-        )
-        fig.update_layout(height=500)
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # 시즌별 매출 비교 (바 차트)
-        fig_bar = px.bar(
-            x=['23SS', '23FW', '24SS', '24FW', '25SS'],
-            y=sales_data.values,
-            title="시즌별 매출 비교",
-            labels={'x': '시즌', 'y': '매출 (원)'},
-            color=sales_data.values,
-            color_continuous_scale='Blues'
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
+    # 디스커버리 매출 분석
+    discovery_data = analyze_discovery_sales(df, season)
     
-    with tab2:
-        st.subheader("매장별 분석")
+    # 데이터 표시를 위한 HTML 생성
+    def create_styled_table(data):
+        html = f"""
+        <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
+        <thead>
+            <tr style="background-color: #f0f2f6;">
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">순위</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">유통사</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">매장수</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 총 매출</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 총 매출</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">총매출 신장률</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 평균매출</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 평균매출</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">평균매출 신장률</th>
+            </tr>
+        </thead>
+        <tbody>
+        """
         
-        # 매장별 25SS 매출 상위 10개
-        store_sales = filtered_df.groupby('매장명')['25SS'].sum().sort_values(ascending=False).head(10)
-        
-        fig = px.bar(
-            x=store_sales.values,
-            y=store_sales.index,
-            orientation='h',
-            title="매장별 25SS 매출 TOP 10",
-            labels={'x': '매출 (원)', 'y': '매장명'}
-        )
-        fig.update_layout(height=600)
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # 매장 면적 vs 매출 산점도
-        area_sales_df = filtered_df.groupby('매장명').agg({
-            '매장 면적': 'first',
-            '25SS': 'sum'
-        }).dropna().reset_index()
-        
-        if not area_sales_df.empty:
-            fig_scatter = px.scatter(
-                area_sales_df,
-                x='매장 면적',
-                y='25SS',
-                title="매장 면적 vs 25SS 매출",
-                labels={'매장 면적': '매장 면적 (㎡)', '25SS': '25SS 매출 (원)'},
-                hover_data=['매장명']
-            )
-            st.plotly_chart(fig_scatter, use_container_width=True)
-    
-    with tab3:
-        st.subheader("브랜드별 분석")
-        
-        # 브랜드별 25SS 매출 상위 10개
-        brand_sales = filtered_df.groupby('브랜드')['25SS'].sum().sort_values(ascending=False).head(10)
-        
-        fig = px.pie(
-            values=brand_sales.values,
-            names=brand_sales.index,
-            title="브랜드별 25SS 매출 비중 (TOP 10)"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # 브랜드별 시계열 매출 히트맵
-        brand_season_data = filtered_df.groupby('브랜드')[sales_columns].sum()
-        brand_season_data = brand_season_data.sort_values('25SS', ascending=False).head(15)
-        
-        fig_heatmap = px.imshow(
-            brand_season_data.values,
-            x=sales_columns,
-            y=brand_season_data.index,
-            title="브랜드별 시계열 매출 히트맵 (TOP 15)",
-            color_continuous_scale='Blues',
-            aspect='auto'
-        )
-        fig_heatmap.update_layout(height=600)
-        st.plotly_chart(fig_heatmap, use_container_width=True)
-    
-    with tab4:
-        st.subheader("데이터 테이블")
-        
-        # 필터링된 데이터 표시
-        st.write(f"총 {len(filtered_df)}개의 레코드가 표시됩니다.")
-        
-        # 컬럼 선택
-        display_columns = st.multiselect(
-            "표시할 컬럼을 선택하세요:",
-            options=df.columns.tolist(),
-            default=['유통사', '매장명', '브랜드', '25SS', '24FW', '24SS', '23FW', '23SS']
-        )
-        
-        if display_columns:
-            st.dataframe(
-                filtered_df[display_columns],
-                use_container_width=True,
-                height=400
-            )
+        for _, row in data.iterrows():
+            # 신장률에 따른 색상 결정
+            total_growth_color = "color: #0066cc;" if row['총매출 신장률'] > 0 else "color: #cc0000;"
+            avg_growth_color = "color: #0066cc;" if row['평균매출 신장률'] > 0 else "color: #cc0000;"
             
-            # CSV 다운로드 버튼
-            csv = filtered_df[display_columns].to_csv(index=False, encoding='utf-8-sig')
-            st.download_button(
-                label="📥 필터링된 데이터 다운로드",
-                data=csv,
-                file_name=f"filtered_outlet_data_{selected_distributor}_{selected_store}_{selected_brand}.csv",
-                mime="text/csv"
-            )
+            # 신장률 아이콘
+            total_growth_icon = "▲" if row['총매출 신장률'] > 0 else "▼"
+            avg_growth_icon = "▲" if row['평균매출 신장률'] > 0 else "▼"
+            
+            html += f"""
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{int(row['순위'])}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{row['유통사']}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{int(row['매장수'])}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 총 매출']:,.0f}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 총 매출']:,.0f}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; {total_growth_color} font-weight: bold;">{total_growth_icon} {row['총매출 신장률']}%</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 평균매출']:,.0f}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 평균매출']:,.0f}</td>
+                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; {avg_growth_color} font-weight: bold;">{avg_growth_icon} {row['평균매출 신장률']}%</td>
+            </tr>
+            """
+        
+        html += """
+        </tbody>
+        </table>
+        </div>
+        """
+        
+        return html
+    
+    # 스타일이 적용된 테이블 표시
+    st.markdown(create_styled_table(discovery_data), unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # 2. 동업계 MS 현황 (플레이스홀더)
+    st.subheader("📈 동업계 MS 현황")
+    st.info("동업계 MS 현황 데이터가 준비되면 구현 예정입니다.")
+    
+    # 간단한 차트로 대체 (전체 브랜드 매출 비교)
+    if season == 'SS':
+        current_col = '25SS'
+        previous_col = '24SS'
+    else:
+        current_col = '25FW'
+        previous_col = '24FW'
+    
+    # 브랜드별 매출 비교
+    brand_comparison = df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+    
+    fig = px.bar(
+        x=brand_comparison.values,
+        y=brand_comparison.index,
+        orientation='h',
+        title=f"브랜드별 {season}시즌 매출 TOP 10",
+        labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
+    )
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # 3. 아울렛 매장 효율 (플레이스홀더)
+    st.subheader("⚡ 아울렛 매장 효율")
+    st.info("아울렛 매장 효율 분석 데이터가 준비되면 구현 예정입니다.")
+    
+    # 간단한 매장 효율 지표로 대체 (매장 면적 대비 매출)
+    efficiency_data = df[df['매장 면적'] > 0].copy()
+    if not efficiency_data.empty:
+        if season == 'SS':
+            efficiency_data['효율성'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
+        else:
+            efficiency_data['효율성'] = efficiency_data['25FW'] / efficiency_data['매장 면적']
+        
+        # 매장별 효율성 TOP 10
+        top_efficiency = efficiency_data.nlargest(10, '효율성')[['매장명', '유통사', '매장 면적', f'{season}시즌 총 매출' if season == 'SS' else '25FW', '효율성']]
+        
+        st.subheader(f"매장 효율성 TOP 10 ({season}시즌)")
+        st.dataframe(top_efficiency, use_container_width=True)
+    
+    st.markdown("---")
     
     # 푸터
-    st.markdown("---")
     st.markdown("### 📝 데이터 정보")
-    st.info("""
+    st.info(f"""
     - **데이터 출처**: DX OUTLET MS DB
+    - **현재 시즌**: {season}시즌 ({'25SS' if season == 'SS' else '25FW'} 기준)
+    - **비교 시즌**: 전년 {season}시즌 ({'24SS' if season == 'SS' else '24FW'} 기준)
     - **업데이트**: 실시간
-    - **포함 정보**: 아울렛 매장의 브랜드별 시즌 매출 데이터
-    - **시즌 구분**: SS(Spring/Summer), FW(Fall/Winter)
     """)
 
 if __name__ == "__main__":
