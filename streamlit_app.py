@@ -155,7 +155,7 @@ def main():
         area_sales_df = filtered_df.groupby('매장명').agg({
             '매장 면적': 'first',
             '25SS': 'sum'
-        }).dropna()
+        }).dropna().reset_index()
         
         if not area_sales_df.empty:
             fig_scatter = px.scatter(
