@@ -316,7 +316,7 @@ if df is not None:
         st.metric("디스커버리 건수", discovery_count)
     
     # 아울렛 동향 섹션
-            st.markdown('<h2 class="section-header">🏪 아울렛 동향</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🏪 아울렛 동향</h2>', unsafe_allow_html=True)
             
             # 아울렛 매출 흐름 - 디스커버리
             st.subheader("📈 아울렛 매출 흐름 - 디스커버리")
@@ -722,9 +722,9 @@ if df is not None:
                     change = prev - current
                     
                     if change > 0:
-                        return f"{current}<span style='color: #0066cc; font-weight: bold;'>(▲{change})</span>"
+                        return f"{current}<span style='color: #0066ff; font-weight: bold; font-size: 14px;'>(▲{change})</span>"
                     elif change < 0:
-                        return f"{current}<span style='color: #cc0000; font-weight: bold;'>(▼{abs(change)})</span>"
+                        return f"{current}<span style='color: #ff0000; font-weight: bold; font-size: 14px;'>(▼{abs(change)})</span>"
                     else:
                         return f"{current}(-)"
                 
@@ -745,11 +745,11 @@ if df is not None:
                 # 전년비 색상 표시
                 def format_growth_with_color(growth):
                     if growth > 0:
-                        return f"<span style='color: #0066cc; font-weight: bold;'>▲ {growth:+.1f}%</span>"
+                        return f"<span style='color: #0066ff; font-weight: bold; font-size: 14px;'>▲ {growth:+.1f}%</span>"
                     elif growth < 0:
-                        return f"<span style='color: #cc0000; font-weight: bold;'>▼ {growth:+.1f}%</span>"
+                        return f"<span style='color: #ff0000; font-weight: bold; font-size: 14px;'>▼ {growth:+.1f}%</span>"
                     else:
-                        return f"<span style='color: #666;'>0.0%</span>"
+                        return f"<span style='color: #666; font-size: 14px;'>0.0%</span>"
                 
                 ms_table['SS 전년비'] = ms_table['SS 전년비'].apply(format_growth_with_color)
                 
@@ -897,9 +897,9 @@ if df is not None:
                     change = prev - current
                     
                     if change > 0:
-                        return f"{current}<span style='color: #0066cc; font-weight: bold;'>(▲{change})</span>"
+                        return f"{current}<span style='color: #0066ff; font-weight: bold; font-size: 14px;'>(▲{change})</span>"
                     elif change < 0:
-                        return f"{current}<span style='color: #cc0000; font-weight: bold;'>(▼{abs(change)})</span>"
+                        return f"{current}<span style='color: #ff0000; font-weight: bold; font-size: 14px;'>(▼{abs(change)})</span>"
                     else:
                         return f"{current}(-)"
                 
@@ -920,11 +920,11 @@ if df is not None:
                 # 전년비 색상 표시
                 def format_growth_with_color(growth):
                     if growth > 0:
-                        return f"<span style='color: #0066cc; font-weight: bold;'>▲ {growth:+.1f}%</span>"
+                        return f"<span style='color: #0066ff; font-weight: bold; font-size: 14px;'>▲ {growth:+.1f}%</span>"
                     elif growth < 0:
-                        return f"<span style='color: #cc0000; font-weight: bold;'>▼ {growth:+.1f}%</span>"
+                        return f"<span style='color: #ff0000; font-weight: bold; font-size: 14px;'>▼ {growth:+.1f}%</span>"
                     else:
-                        return f"<span style='color: #666;'>0.0%</span>"
+                        return f"<span style='color: #666; font-size: 14px;'>0.0%</span>"
                 
                 ms_table['FW 전년비'] = ms_table['FW 전년비'].apply(format_growth_with_color)
                 
