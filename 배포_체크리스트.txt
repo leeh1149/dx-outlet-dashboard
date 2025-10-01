@@ -1,0 +1,71 @@
+========================================
+🚀 DX OUTLET Dashboard 배포 체크리스트
+========================================
+
+✅ 완료된 항목:
+- dashboard_streamlit.py (메인 대시보드)
+- requirements.txt (Python 패키지 의존성)
+- README.md (프로젝트 설명서)
+- STREAMLIT_CLOUD_배포_가이드.md (상세 배포 가이드)
+- GitHub_업로드_가이드.md (GitHub 업로드 방법)
+- 배포_자동화_스크립트.bat (Git 자동화 스크립트)
+- DX OUTLET MS DB.csv (데이터 파일)
+
+📋 배포 단계:
+
+1️⃣ GitHub 저장소 생성
+   - [ ] GitHub.com 접속 및 로그인
+   - [ ] "New repository" 클릭
+   - [ ] 저장소명: dx-outlet-dashboard
+   - [ ] Public으로 설정
+   - [ ] "Create repository" 클릭
+
+2️⃣ 파일 업로드 (3가지 방법 중 선택)
+   
+   방법 A: GitHub 웹사이트 직접 업로드
+   - [ ] 저장소 페이지에서 "uploading an existing file" 클릭
+   - [ ] 다음 파일들 업로드:
+     * dashboard_streamlit.py
+     * requirements.txt
+     * README.md
+     * DX OUTLET MS DB.csv
+     * STREAMLIT_CLOUD_배포_가이드.md
+   - [ ] "Commit changes" 클릭
+
+   방법 B: Git 설치 후 자동화 스크립트
+   - [ ] Git for Windows 설치: https://git-scm.com/download/win
+   - [ ] 배포_자동화_스크립트.bat 실행
+   - [ ] GitHub 저장소 생성 후 제공된 명령어 실행
+
+   방법 C: GitHub Desktop 사용
+   - [ ] GitHub Desktop 설치: https://desktop.github.com/
+   - [ ] 새 저장소 생성 (Public)
+   - [ ] 파일들 추가 후 "Publish repository"
+
+3️⃣ Streamlit Cloud 배포
+   - [ ] https://share.streamlit.io/ 접속
+   - [ ] GitHub 계정으로 로그인
+   - [ ] "New app" 클릭
+   - [ ] 배포 설정:
+     * Repository: dx-outlet-dashboard
+     * Branch: main
+     * Main file path: dashboard_streamlit.py
+   - [ ] "Deploy" 클릭
+
+4️⃣ 배포 확인
+   - [ ] 배포 완료 후 제공된 URL 접속
+   - [ ] 대시보드 정상 작동 확인
+   - [ ] 모든 기능 테스트
+
+⚠️ 주의사항:
+- CSV 파일이 100MB를 초과하면 Git LFS 사용 필요
+- API 키는 Streamlit Cloud Secrets에 등록
+- Public 저장소 필수 (무료 배포를 위해)
+
+🎯 예상 배포 URL:
+https://[사용자명]-dx-outlet-dashboard-[랜덤문자].streamlit.app
+
+📞 문제 발생 시:
+1. Streamlit Cloud 로그 확인
+2. GitHub Issues에 문제 보고
+3. Streamlit Community Forum 참조
