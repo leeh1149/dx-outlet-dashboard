@@ -59,14 +59,18 @@ def analyze_discovery_sales(df, season):
     discovery_summary = discovery_summary.rename(columns={'매장명': '매장수'})
     
     # 평균 매출 계산
-    discovery_summary[f'{current_col}_평균매출'] = discovery_summary[current_col] / discovery_summary['매장수']
-    discovery_summary[f'{previous_col}_평균매출'] = discovery_summary[previous_col] / discovery_summary['매장수']
+    discovery_summary['현재_평균매출'] = discovery_summary[current_col] / discovery_summary['매장수']
+    discovery_summary['전년_평균매출'] = discovery_summary[previous_col] / discovery_summary['매장수']
     
-    # 신장률 계산 (총 매출)
-    discovery_summary['총매출_신장률'] = ((discovery_summary[current_col] - discovery_summary[previous_col]) / discovery_summary[previous_col] * 100).round(1)
+    # 신장률 계산 (총 매출) - 0으로 나누기 방지
+    discovery_summary['총매출_신장률'] = 0.0
+    mask = discovery_summary[previous_col] > 0
+    discovery_summary.loc[mask, '총매출_신장률'] = ((discovery_summary.loc[mask, current_col] - discovery_summary.loc[mask, previous_col]) / discovery_summary.loc[mask, previous_col] * 100).round(1)
     
-    # 신장률 계산 (평균 매출)
-    discovery_summary['평균매출_신장률'] = ((discovery_summary[f'{current_col}_평균매출'] - discovery_summary[f'{previous_col}_평균매출']) / discovery_summary[f'{previous_col}_평균매출'] * 100).round(1)
+    # 신장률 계산 (평균 매출) - 0으로 나누기 방지
+    discovery_summary['평균매출_신장률'] = 0.0
+    mask_avg = discovery_summary['전년_평균매출'] > 0
+    discovery_summary.loc[mask_avg, '평균매출_신장률'] = ((discovery_summary.loc[mask_avg, '현재_평균매출'] - discovery_summary.loc[mask_avg, '전년_평균매출']) / discovery_summary.loc[mask_avg, '전년_평균매출'] * 100).round(1)
     
     # 순위 계산 (총 매출 기준)
     discovery_summary = discovery_summary.sort_values(current_col, ascending=False).reset_index(drop=True)
@@ -76,8 +80,8 @@ def analyze_discovery_sales(df, season):
     discovery_summary = discovery_summary.rename(columns={
         current_col: f'{season}시즌 총 매출',
         previous_col: f'전년{season}시즌 총 매출',
-        f'{current_col}_평균매출': f'{season}시즌 평균매출',
-        f'{previous_col}_평균매출': f'전년{season}시즌 평균매출',
+        '현재_평균매출': f'{season}시즌 평균매출',
+        '전년_평균매출': f'전년{season}시즌 평균매출',
         '총매출_신장률': '총매출 신장률',
         '평균매출_신장률': '평균매출 신장률'
     })
