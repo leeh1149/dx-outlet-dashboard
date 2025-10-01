@@ -164,7 +164,7 @@ def main():
                 y='25SS',
                 title="매장 면적 vs 25SS 매출",
                 labels={'매장 면적': '매장 면적 (㎡)', '25SS': '25SS 매출 (원)'},
-                hover_data={'매장명': True}
+                hover_data=['매장명']
             )
             st.plotly_chart(fig_scatter, use_container_width=True)
     
