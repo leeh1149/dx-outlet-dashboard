@@ -408,23 +408,23 @@ def main():
                 category_orders={"names": chart_data_current.index.tolist()}  # 구성비 큰 순으로 정렬
             )
             
-            # 디스커버리 부분 강조 (두꺼운 테두리 및 굵은 글씨)
-            fig_pie.update_traces(
-                textposition='inside',
-                textinfo='percent+label',
-                hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>',
-                marker_line=dict(width=2, color='white'),
-                textfont=dict(size=12, color='black')  # 모든 텍스트를 검은색으로 설정
-            )
-            
-            # 디스커버리 부분만 더 두꺼운 테두리 및 굵은 글씨 적용
-            for i, brand in enumerate(chart_data_current.index):
-                if brand == '디스커버리':
-                    fig_pie.data[0].marker.line.width = [6 if j == i else 2 for j in range(len(chart_data_current))]
-                    fig_pie.data[0].marker.line.color = ['red' if j == i else 'white' for j in range(len(chart_data_current))]
-                    # 디스커버리 텍스트를 굵게 표시
-                    fig_pie.data[0].textfont.size = [16 if j == i else 12 for j in range(len(chart_data_current))]
-                    fig_pie.data[0].textfont.color = ['black'] * len(chart_data_current)  # 모든 텍스트를 검은색으로
+             # 디스커버리 부분 강조 (두꺼운 테두리 및 굵은 글씨)
+             fig_pie.update_traces(
+                 textposition='inside',
+                 textinfo='percent+label',
+                 hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>',
+                 marker_line=dict(width=2, color='white'),
+                 textfont=dict(size=12, color='black')  # 모든 텍스트를 검은색으로 설정
+             )
+             
+             # 디스커버리 부분만 더 두꺼운 테두리 및 굵은 글씨 적용
+             for i, brand in enumerate(chart_data_current.index):
+                 if brand == '디스커버리':
+                     fig_pie.data[0].marker.line.width = [6 if j == i else 2 for j in range(len(chart_data_current))]
+                     fig_pie.data[0].marker.line.color = ['red' if j == i else 'white' for j in range(len(chart_data_current))]
+                     # 디스커버리 텍스트를 굵게 표시
+                     fig_pie.data[0].textfont.size = [16 if j == i else 12 for j in range(len(chart_data_current))]
+                     fig_pie.data[0].textfont.color = ['black'] * len(chart_data_current)  # 모든 텍스트를 검은색으로
             
             fig_pie.update_layout(height=500)
             st.plotly_chart(fig_pie, use_container_width=True)
@@ -541,30 +541,38 @@ def main():
             total_current_formatted = f"{total_current/100_000_000:.2f}억원"
             total_previous_formatted = f"{total_previous/100_000_000:.2f}억원"
         
-        # 합계 행을 테이블 데이터에 직접 추가
-        table_data.append({
+        total_row = {
             '순위변동': '',
-            '브랜드': '합계',
-            current_col_name: total_current_formatted,
-            previous_col_name: total_previous_formatted,
-            '증감률': f"{total_growth:+.1f}%"
-        })
+            '브랜드': '**합계**',
+            current_col_name: f"**{total_current_formatted}**",
+            previous_col_name: f"**{total_previous_formatted}**",
+            '증감률': f"**{total_growth:+.1f}%**"
+        }
         
-        # 최종 DataFrame 생성
-        final_table_df = pd.DataFrame(table_data)
-        
-        # 기본 테이블 표시 (스타일링 제거하여 오류 방지)
-        st.dataframe(final_table_df, use_container_width=True, hide_index=True)
-        
-        # 디스커버리와 합계 정보 별도 표시
-        discovery_row = final_table_df[final_table_df['브랜드'] == '디스커버리']
-        total_row = final_table_df[final_table_df['브랜드'] == '합계']
-        
-        if not discovery_row.empty:
-            st.info("🎯 **디스커버리**: 분홍색 강조된 행을 확인하세요.")
-        
-        if not total_row.empty:
-            st.success("📊 **합계**: 파란색 강조된 행을 확인하세요.")
+         # 합계 행을 테이블 데이터에 직접 추가
+         table_data.append({
+             '순위변동': '',
+             '브랜드': '합계',
+             current_col_name: total_current_formatted,
+             previous_col_name: total_previous_formatted,
+             '증감률': f"{total_growth:+.1f}%"
+         })
+         
+         # 최종 DataFrame 생성
+         final_table_df = pd.DataFrame(table_data)
+         
+         # 기본 테이블 표시 (스타일링 제거하여 오류 방지)
+         st.dataframe(final_table_df, use_container_width=True, hide_index=True)
+         
+         # 디스커버리와 합계 정보 별도 표시
+         discovery_row = final_table_df[final_table_df['브랜드'] == '디스커버리']
+         total_row = final_table_df[final_table_df['브랜드'] == '합계']
+         
+         if not discovery_row.empty:
+             st.info("🎯 **디스커버리**: 분홍색 강조된 행을 확인하세요.")
+         
+         if not total_row.empty:
+             st.success("📊 **합계**: 파란색 강조된 행을 확인하세요.")
     
     else:
         st.warning("선택한 조건에 해당하는 브랜드 데이터가 없습니다.")
