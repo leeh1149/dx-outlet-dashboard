@@ -74,6 +74,14 @@ def main():
     
     st.markdown("---")
     
+    # 시즌별 컬럼 설정
+    if season == 'SS':
+        current_col = '25SS'
+        previous_col = '24SS'
+    else:  # FW
+        current_col = '24FW'  # 25FW가 없으므로 24FW 사용
+        previous_col = '23FW'
+    
     # 1. AI 인사이트 (재미나이 2.5 연동)
     st.subheader("🤖 AI 인사이트 - 재미나이 2.5")
     
@@ -242,12 +250,6 @@ def main():
     discovery_df = filtered_df[filtered_df['브랜드'] == '디스커버리'].copy()
     
     if not discovery_df.empty:
-        if season == 'SS':
-            current_col = '25SS'
-            previous_col = '24SS'
-        else:  # FW
-            current_col = '24FW'  # 25FW가 없으므로 24FW 사용
-            previous_col = '23FW'
         
         # 유통사별 집계
         discovery_summary = discovery_df.groupby('유통사').agg({
@@ -413,12 +415,6 @@ def main():
         st.info("📊 **평균 매출 기준**: 브랜드별 매장당 평균 매출로 비교합니다. (매출 0인 매장 제외)")
     
     # 전체 브랜드 매출 비교
-    if season == 'SS':
-        current_col = '25SS'
-        previous_col = '24SS'
-    else:
-        current_col = '24FW'  # 25FW가 없으므로 24FW 사용
-        previous_col = '23FW'
     
     if analysis_type == "총 매출 기준":
         # 브랜드별 총 매출 비교 (최근 시즌과 직전 시즌)
