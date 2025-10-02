@@ -39,23 +39,46 @@ def load_data():
 def main():
     # 헤더
     st.title("📊 DX OUTLET 매출 현황 대시보드")
-    st.markdown("---")
     
     # 데이터 로드
     df = load_data()
     if df is None:
         st.stop()
     
+    # 사이드바 필터
+    st.sidebar.header("🔍 필터 옵션")
+    
+    # 유통사 필터
+    distributors = ['전체'] + sorted(df['유통사'].unique().tolist())
+    selected_distributor = st.sidebar.selectbox("유통사 선택", distributors)
+    
+    # 매장 필터
+    if selected_distributor != '전체':
+        store_options = ['전체'] + sorted(df[df['유통사'] == selected_distributor]['매장명'].unique().tolist())
+    else:
+        store_options = ['전체'] + sorted(df['매장명'].unique().tolist())
+    
+    selected_store = st.sidebar.selectbox("매장명 선택", store_options)
+    
+    # 데이터 필터링
+    filtered_df = df.copy()
+    
+    if selected_distributor != '전체':
+        filtered_df = filtered_df[filtered_df['유통사'] == selected_distributor]
+    
+    if selected_store != '전체':
+        filtered_df = filtered_df[filtered_df['매장명'] == selected_store]
+    
     # 시즌 선택
     season = st.selectbox("시즌 선택", ['SS', 'FW'], key="season_selector")
     
     st.markdown("---")
     
-    # 1. 아울렛 매출 현황 - 디스커버리
-    st.subheader("🏪 아울렛 매출 현황 - 디스커버리")
+    # 1. 아울렛 매출현황 - 디스커버리
+    st.subheader("🏪 아울렛 매출현황 - 디스커버리")
     
     # 디스커버리 브랜드만 필터링
-    discovery_df = df[df['브랜드'] == '디스커버리'].copy()
+    discovery_df = filtered_df[filtered_df['브랜드'] == '디스커버리'].copy()
     
     if not discovery_df.empty:
         if season == 'SS':
@@ -161,15 +184,14 @@ def main():
         # 스타일이 적용된 테이블 표시
         st.markdown(create_styled_table(result_df), unsafe_allow_html=True)
     else:
-        st.warning("디스커버리 브랜드 데이터가 없습니다.")
+        st.warning("선택한 조건에 해당하는 디스커버리 브랜드 데이터가 없습니다.")
     
     st.markdown("---")
     
     # 2. 동업계 MS 현황
     st.subheader("📈 동업계 MS 현황")
-    st.info("동업계 MS 현황 데이터가 준비되면 구현 예정입니다.")
     
-    # 간단한 차트로 대체 (전체 브랜드 매출 비교)
+    # 전체 브랜드 매출 비교
     if season == 'SS':
         current_col = '25SS'
         previous_col = '24SS'
@@ -178,26 +200,39 @@ def main():
         previous_col = '24FW'
     
     # 브랜드별 매출 비교
-    brand_comparison = df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+    brand_comparison = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
     
-    fig = px.bar(
-        x=brand_comparison.values,
-        y=brand_comparison.index,
-        orientation='h',
-        title=f"브랜드별 {season}시즌 매출 TOP 10",
-        labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # 바 차트
+        fig = px.bar(
+            x=brand_comparison.values,
+            y=brand_comparison.index,
+            orientation='h',
+            title=f"브랜드별 {season}시즌 매출 TOP 10",
+            labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
+        )
+        fig.update_layout(height=500)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # 파이 차트
+        fig_pie = px.pie(
+            values=brand_comparison.values,
+            names=brand_comparison.index,
+            title=f"브랜드별 {season}시즌 매출 비중"
+        )
+        fig_pie.update_layout(height=500)
+        st.plotly_chart(fig_pie, use_container_width=True)
     
     st.markdown("---")
     
     # 3. 아울렛 매장 효율
     st.subheader("⚡ 아울렛 매장 효율")
-    st.info("아울렛 매장 효율 분석 데이터가 준비되면 구현 예정입니다.")
     
-    # 간단한 매장 효율 지표로 대체 (매장 면적 대비 매출)
-    efficiency_data = df[df['매장 면적'] > 0].copy()
+    # 매장 면적 대비 매출 효율성
+    efficiency_data = filtered_df[filtered_df['매장 면적'] > 0].copy()
     if not efficiency_data.empty:
         if season == 'SS':
             efficiency_data['효율성'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
@@ -207,8 +242,24 @@ def main():
         # 매장별 효율성 TOP 10
         top_efficiency = efficiency_data.nlargest(10, '효율성')[['매장명', '유통사', '매장 면적', current_col, '효율성']]
         
-        st.subheader(f"매장 효율성 TOP 10 ({season}시즌)")
-        st.dataframe(top_efficiency, use_container_width=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader(f"매장 효율성 TOP 10 ({season}시즌)")
+            st.dataframe(top_efficiency, use_container_width=True)
+        
+        with col2:
+            # 효율성 분포 히스토그램
+            fig_hist = px.histogram(
+                efficiency_data,
+                x='효율성',
+                title=f"매장 효율성 분포 ({season}시즌)",
+                labels={'효율성': f'{season}시즌 매출/면적 (원/㎡)', 'count': '매장 수'}
+            )
+            fig_hist.update_layout(height=400)
+            st.plotly_chart(fig_hist, use_container_width=True)
+    else:
+        st.warning("매장 면적 데이터가 있는 매장이 없습니다.")
     
     st.markdown("---")
     
@@ -218,6 +269,8 @@ def main():
     - **데이터 출처**: DX OUTLET MS DB
     - **현재 시즌**: {season}시즌 ({current_col} 기준)
     - **비교 시즌**: 전년 {season}시즌 ({previous_col} 기준)
+    - **선택된 유통사**: {selected_distributor}
+    - **선택된 매장**: {selected_store}
     - **업데이트**: 실시간
     """)
 
