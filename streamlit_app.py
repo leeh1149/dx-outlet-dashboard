@@ -85,8 +85,8 @@ def main():
             current_col = '25SS'
             previous_col = '24SS'
         else:  # FW
-            current_col = '25FW'
-            previous_col = '24FW'
+            current_col = '24FW'  # 25FW가 없으므로 24FW 사용
+            previous_col = '23FW'
         
         # 유통사별 집계
         discovery_summary = discovery_df.groupby('유통사').agg({
@@ -196,8 +196,8 @@ def main():
         current_col = '25SS'
         previous_col = '24SS'
     else:
-        current_col = '25FW'
-        previous_col = '24FW'
+        current_col = '24FW'  # 25FW가 없으므로 24FW 사용
+        previous_col = '23FW'
     
     # 브랜드별 매출 비교
     brand_comparison = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
@@ -240,7 +240,7 @@ def main():
         if season == 'SS':
             efficiency_data['효율성'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
         else:
-            efficiency_data['효율성'] = efficiency_data['25FW'] / efficiency_data['매장 면적']
+            efficiency_data['효율성'] = efficiency_data['24FW'] / efficiency_data['매장 면적']  # 25FW가 없으므로 24FW 사용
         
         # 매장별 효율성 TOP 10
         top_efficiency = efficiency_data.nlargest(10, '효율성')[['매장명', '유통사', '매장 면적', current_col, '효율성']]
