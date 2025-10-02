@@ -307,8 +307,8 @@ def main():
         
         rank_changes = calculate_rank_change(brand_comparison_current, brand_comparison_previous)
         
-        # 차트용 전체 데이터 (TOP 10 제한 해제)
-        chart_data_current = brand_comparison_current
+        # 차트용 데이터 (매출 0인 브랜드 제외)
+        chart_data_current = brand_comparison_current[brand_comparison_current > 0]
         chart_data_previous = brand_comparison_previous.reindex(chart_data_current.index, fill_value=0)
         
         # 디스커버리 강조를 위한 색상 설정 (차트용)
@@ -334,7 +334,7 @@ def main():
                     current_colors.append('#4682B4')  # 진한 파랑색
             
             fig.add_trace(go.Bar(
-                name=f'{season}시즌',
+                name=current_col,
                 x=chart_data_current.index,
                 y=chart_data_current.values,
                 marker_color=current_colors,
@@ -350,7 +350,7 @@ def main():
                     previous_colors.append('#87CEEB')  # 연한 파랑색
             
             fig.add_trace(go.Bar(
-                name=f'전년{season}시즌',
+                name=previous_col,
                 x=chart_data_current.index,
                 y=chart_data_previous.values,
                 marker_color=previous_colors,
@@ -359,10 +359,10 @@ def main():
             
             # 제목과 y축 단위 설정
             if analysis_type == "총 매출 기준":
-                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 총 매출 비교"
+                title = f"브랜드별 {current_col} vs {previous_col} 총 매출 비교"
                 y_title = "총 매출 (원)"
             else:
-                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 평균 매출 비교"
+                title = f"브랜드별 {current_col} vs {previous_col} 평균 매출 비교"
                 y_title = "평균 매출 (원)"
             
             # 브랜드 수에 따라 차트 높이 조정
@@ -396,15 +396,16 @@ def main():
             
             # 파이 차트 제목 설정
             if analysis_type == "총 매출 기준":
-                pie_title = f"브랜드별 {season}시즌 총 매출 비중"
+                pie_title = f"브랜드별 {current_col} 총 매출 비중"
             else:
-                pie_title = f"브랜드별 {season}시즌 평균 매출 비중"
+                pie_title = f"브랜드별 {current_col} 평균 매출 비중"
             
             fig_pie = px.pie(
                 values=chart_data_current.values,
                 names=chart_data_current.index,
                 title=pie_title,
-                color_discrete_sequence=pie_colors
+                color_discrete_sequence=pie_colors,
+                category_orders={"names": chart_data_current.index.tolist()}  # 구성비 큰 순으로 정렬
             )
             
             # 디스커버리 부분 강조 (두꺼운 테두리)
@@ -436,13 +437,13 @@ def main():
             with col1:
                 if analysis_type == "총 매출 기준":
                     st.metric(
-                        f"{season}시즌 총 매출", 
+                        f"{current_col} 총 매출", 
                         f"{discovery_current/100_000_000:.2f}억원",
                         delta=f"{discovery_growth:.1f}%"
                     )
                 else:
                     st.metric(
-                        f"{season}시즌 평균 매출", 
+                        f"{current_col} 평균 매출", 
                         f"{discovery_current/100_000_000:.2f}억원",
                         delta=f"{discovery_growth:.1f}%"
                     )
@@ -488,13 +489,13 @@ def main():
             if analysis_type == "총 매출 기준":
                 current_formatted = f"{current_val/100_000_000:.2f}억원"
                 previous_formatted = f"{previous_val/100_000_000:.2f}억원"
-                current_col_name = f'{season}시즌 총매출'
-                previous_col_name = f'전년{season}시즌 총매출'
+                current_col_name = f'{current_col} 총매출'
+                previous_col_name = f'{previous_col} 총매출'
             else:
                 current_formatted = f"{current_val/100_000_000:.2f}억원"
                 previous_formatted = f"{previous_val/100_000_000:.2f}억원"
-                current_col_name = f'{season}시즌 평균매출'
-                previous_col_name = f'전년{season}시즌 평균매출'
+                current_col_name = f'{current_col} 평균매출'
+                previous_col_name = f'{previous_col} 평균매출'
             
             table_data.append({
                 '순위변동': format_rank_change(i + 1, rank_change),
