@@ -1,4 +1,4 @@
-name: Deploy Streamlit App to GitHub Pages
+name: Deploy Streamlit App
 
 on:
   push:
@@ -9,36 +9,18 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
+    - uses: actions/checkout@v3
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-        
+        python-version: '3.9'
+    
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install streamlit-option-menu streamlit-aggrid
-        
-    - name: Test Streamlit app
+    
+    - name: Run Streamlit app
       run: |
-        streamlit run dashboard_streamlit.py --server.headless true --server.port 8501 &
-        sleep 10
-        curl -f http://localhost:8501 || exit 1
-        
-    - name: Deploy to Streamlit Cloud
-      env:
-        STREAMLIT_TOKEN: ${{ secrets.STREAMLIT_TOKEN }}
-      run: |
-        echo "App is ready for Streamlit Cloud deployment"
-        echo "Manual deployment steps:"
-        echo "1. Go to https://share.streamlit.io/"
-        echo "2. Click 'New app'"
-        echo "3. Connect your GitHub repository"
-        echo "4. Set main file path to 'dashboard_streamlit.py'"
-        echo "5. Deploy!"
+        streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0
