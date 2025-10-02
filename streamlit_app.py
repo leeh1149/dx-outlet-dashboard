@@ -83,6 +83,10 @@ def main():
         
         # 1. 디스커버리 브랜드 성과 분석
         discovery_data = df[df['브랜드'] == '디스커버리']
+        discovery_current = 0
+        discovery_previous = 0
+        discovery_growth = 0
+        
         if not discovery_data.empty:
             discovery_current = discovery_data[current_col].sum()
             discovery_previous = discovery_data[previous_col].sum()
