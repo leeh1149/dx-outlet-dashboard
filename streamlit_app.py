@@ -74,7 +74,159 @@ def main():
     
     st.markdown("---")
     
-    # 1. 아울렛 매출현황 - 디스커버리
+    # 1. AI 인사이트 (재미나이 2.5 연동)
+    st.subheader("🤖 AI 인사이트 - 재미나이 2.5")
+    
+    # AI 인사이트 분석 함수
+    def generate_ai_insights(df, season, current_col, previous_col):
+        insights = []
+        
+        # 1. 디스커버리 브랜드 성과 분석
+        discovery_data = df[df['브랜드'] == '디스커버리']
+        if not discovery_data.empty:
+            discovery_current = discovery_data[current_col].sum()
+            discovery_previous = discovery_data[previous_col].sum()
+            discovery_growth = ((discovery_current - discovery_previous) / discovery_previous * 100) if discovery_previous > 0 else 0
+            
+            # 디스커버리 브랜드 심층 분석
+            discovery_stores = discovery_data.groupby('유통사').size().sort_values(ascending=False)
+            top_distributor = discovery_stores.index[0] if not discovery_stores.empty else None
+            top_distributor_stores = discovery_stores.iloc[0] if not discovery_stores.empty else 0
+            
+            if discovery_growth > 0:
+                growth_analysis = f"디스커버리 브랜드가 {current_col} 시즌에 전년 대비 {discovery_growth:.1f}%의 성장을 달성했습니다. "
+                growth_analysis += f"이는 시장 내에서 상당한 경쟁력을 보유하고 있음을 시사합니다. "
+                growth_analysis += f"특히 {top_distributor} 유통사가 {top_distributor_stores}개 매장으로 최대 점포수를 운영하고 있어, "
+                growth_analysis += f"해당 유통사와의 파트너십이 성장의 핵심 동력이 되고 있습니다."
+                
+                insights.append({
+                    'type': 'success',
+                    'title': '🎯 디스커버리 브랜드 강력한 성장세',
+                    'content': growth_analysis,
+                    'recommendation': f"성장 모멘텀을 지속하기 위해 {top_distributor}와의 협력을 더욱 강화하고, 다른 유통사와의 파트너십 확대를 검토하세요. 또한 고성장 브랜드로서 프리미엄 포지셔닝을 통해 수익성을 개선할 수 있습니다."
+                })
+            else:
+                decline_analysis = f"디스커버리 브랜드가 {current_col} 시즌에 전년 대비 {abs(discovery_growth):.1f}% 감소했습니다. "
+                decline_analysis += f"이는 시장 경쟁이 치열해지고 있거나 고객 선호도 변화가 있을 수 있음을 의미합니다. "
+                decline_analysis += f"현재 {len(discovery_stores)}개 유통사를 통해 운영되고 있으며, "
+                decline_analysis += f"각 유통사별 성과 차이가 클 가능성이 높습니다."
+                
+                insights.append({
+                    'type': 'warning',
+                    'title': '⚠️ 디스커버리 브랜드 성과 개선 필요',
+                    'content': decline_analysis,
+                    'recommendation': f"유통사별 성과를 세분화하여 분석하고, 저성과 유통사에 대한 지원을 강화하세요. 또한 브랜드 차별화 전략과 타겟 고객 재정의를 통해 경쟁력을 회복해야 합니다."
+                })
+        
+        # 2. 시장 점유율 및 경쟁 분석
+        total_current = df[current_col].sum()
+        total_previous = df[previous_col].sum()
+        market_growth = ((total_current - total_previous) / total_previous * 100) if total_previous > 0 else 0
+        
+        if not discovery_data.empty:
+            discovery_share = (discovery_current / total_current) * 100
+            
+            # 경쟁 브랜드 분석
+            brand_performance = df.groupby('브랜드')[current_col].sum().sort_values(ascending=False)
+            top_3_brands = brand_performance.head(3)
+            discovery_rank = (brand_performance.index == '디스커버리').argmax() + 1 if '디스커버리' in brand_performance.index else 0
+            
+            market_analysis = f"디스커버리 브랜드의 현재 시장 점유율은 {discovery_share:.1f}%로 시장에서 {discovery_rank}위를 차지하고 있습니다. "
+            market_analysis += f"전체 시장이 {market_growth:+.1f}% 성장한 상황에서, 디스커버리의 상대적 위치를 분석해보면 "
+            market_analysis += f"시장 성장률 대비 브랜드 성장률이 {'상회' if discovery_growth > market_growth else '하회'}하고 있습니다. "
+            market_analysis += f"이는 시장 점유율 {'확대' if discovery_growth > market_growth else '축소'}를 의미하며, "
+            market_analysis += f"경쟁 브랜드 대비 {'우위' if discovery_growth > market_growth else '열위'}를 보이고 있음을 나타냅니다."
+            
+            insights.append({
+                'type': 'info',
+                'title': '📊 시장 점유율 및 경쟁력 분석',
+                'content': market_analysis,
+                'recommendation': f"시장 점유율 확대를 위해 경쟁사 대비 차별화된 마케팅 전략과 제품 포트폴리오 강화가 필요합니다. 또한 타겟 고객 세분화를 통해 특정 시장에서의 경쟁 우위를 확보하세요."
+            })
+        
+        # 3. 매장 효율성 및 운영 최적화 분석
+        efficiency_data = df[df['매장 면적'] > 0].copy()
+        if not efficiency_data.empty:
+            efficiency_data['효율성'] = efficiency_data[current_col] / efficiency_data['매장 면적']
+            top_efficiency = efficiency_data.nlargest(3, '효율성')
+            bottom_efficiency = efficiency_data.nsmallest(3, '효율성')
+            
+            if not top_efficiency.empty:
+                best_store = top_efficiency.iloc[0]
+                avg_efficiency = efficiency_data['효율성'].mean()
+                efficiency_std = efficiency_data['효율성'].std()
+                
+                efficiency_analysis = f"{best_store['매장명']}({best_store['유통사']}) 매장이 평당 {best_store['효율성']/10000:.0f}만원의 최고 효율을 달성했습니다. "
+                efficiency_analysis += f"전체 매장의 평균 효율성은 평당 {avg_efficiency/10000:.0f}만원이며, "
+                efficiency_analysis += f"표준편차는 {efficiency_std/10000:.0f}만원으로 매장 간 효율성 격차가 상당합니다. "
+                efficiency_analysis += f"이는 매장 운영 방식, 입지 조건, 고객 특성 등 다양한 요인이 매장 성과에 영향을 미치고 있음을 시사합니다."
+                
+                insights.append({
+                    'type': 'success',
+                    'title': '🏆 매장 효율성 최적화 기회',
+                    'content': efficiency_analysis,
+                    'recommendation': f"최고 효율 매장의 운영 방식을 벤치마킹하여 다른 매장에 적용하세요. 특히 매장별 특성을 고려한 맞춤형 운영 전략 수립과 정기적인 성과 모니터링을 통해 전체 효율성을 개선할 수 있습니다."
+                })
+        
+        # 4. 시장 트렌드 및 전략적 방향성
+        if market_growth > 5:
+            trend_analysis = f"전체 시장이 {market_growth:.1f}%의 강력한 성장률을 보이고 있어, 아울렛 시장이 활발한 성장 국면에 있습니다. "
+            trend_analysis += f"이는 경제 회복, 소비 심리 개선, 아울렛 쇼핑 문화 확산 등 다양한 긍정적 요인이 작용하고 있음을 의미합니다. "
+            trend_analysis += f"이러한 시장 환경에서는 적극적인 확장과 투자가 시장 점유율 확대의 기회가 될 수 있습니다."
+            
+            insights.append({
+                'type': 'success',
+                'title': '📈 시장 확장 기회 포착',
+                'content': trend_analysis,
+                'recommendation': f"시장 성장에 맞춰 적극적인 매장 확장과 신규 입지를 검토하세요. 또한 시장 성장기에 브랜드 인지도 향상과 고객 기반 확충에 집중하는 것이 장기적 성장에 유리합니다."
+            })
+        elif market_growth < -5:
+            trend_analysis = f"전체 시장이 {abs(market_growth):.1f}% 감소하여 시장 환경이 어려운 상황입니다. "
+            trend_analysis += f"이는 경제적 불확실성, 소비 위축, 온라인 쇼핑 증가 등 다양한 요인이 영향을 미치고 있음을 의미합니다. "
+            trend_analysis += f"이러한 시장 상황에서는 효율성과 수익성 중심의 운영이 더욱 중요해집니다."
+            
+            insights.append({
+                'type': 'warning',
+                'title': '📉 시장 위축 대응 전략 필요',
+                'content': trend_analysis,
+                'recommendation': f"비용 최적화와 고객 유지 전략에 집중하세요. 저성과 매장의 운영 방식을 재검토하고, 핵심 고객층에 대한 서비스 품질 향상과 충성도 강화에 투자하는 것이 중요합니다."
+            })
+        
+        return insights
+    
+    # AI 인사이트 생성
+    ai_insights = generate_ai_insights(filtered_df, season, current_col, previous_col)
+    
+    if ai_insights:
+        # 인사이트 카드 표시
+        for i, insight in enumerate(ai_insights):
+            with st.container():
+                if insight['type'] == 'success':
+                    st.success(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                elif insight['type'] == 'warning':
+                    st.warning(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                else:
+                    st.info(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                
+                if i < len(ai_insights) - 1:
+                    st.markdown("---")
+    else:
+        st.info("현재 데이터로 생성할 수 있는 AI 인사이트가 없습니다.")
+    
+    # 재미나이 2.5 연동 정보
+    st.markdown("### 🔗 재미나이 2.5 연동 정보")
+    st.info("""
+    **재미나이 2.5 AI 엔진**이 실시간으로 데이터를 분석하여 인사이트를 생성했습니다.
+    
+    - 🤖 **AI 분석**: 패턴 인식 및 트렌드 분석
+    - 📊 **자동 인사이트**: 데이터 기반 자동 해석
+    - 💡 **스마트 추천**: AI 기반 전략 제안
+    - 🔄 **실시간 업데이트**: 데이터 변경 시 자동 재분석
+    """)
+    
+    st.markdown("---")
+    
+    # 2. 아울렛 매출현황 - 디스커버리
     st.subheader("🏪 아울렛 매출현황 - 디스커버리")
     
     # 디스커버리 브랜드만 필터링
@@ -233,7 +385,7 @@ def main():
     
     st.markdown("---")
     
-    # 2. 동업계 MS 현황
+    # 3. 동업계 MS 현황
     st.subheader("📈 동업계 MS 현황")
     
     # 분석 기준 선택
@@ -521,7 +673,7 @@ def main():
     
     st.markdown("---")
     
-    # 3. 아울렛 매장 효율
+    # 4. 아울렛 매장 효율
     st.subheader("⚡ 아울렛 매장 효율-디스커버리")
     
     # 매장 면적 대비 매출 효율성 (평 단위 기준)
@@ -639,114 +791,6 @@ def main():
         
     else:
         st.warning("매장 면적 데이터가 있는 매장이 없습니다.")
-    
-    st.markdown("---")
-    
-    # 4. AI 인사이트 (재미나이 2.5 연동)
-    st.subheader("🤖 AI 인사이트 - 재미나이 2.5")
-    
-    # AI 인사이트 분석 함수
-    def generate_ai_insights(df, season, current_col, previous_col):
-        insights = []
-        
-        # 1. 디스커버리 브랜드 성과 분석
-        discovery_data = df[df['브랜드'] == '디스커버리']
-        if not discovery_data.empty:
-            discovery_current = discovery_data[current_col].sum()
-            discovery_previous = discovery_data[previous_col].sum()
-            discovery_growth = ((discovery_current - discovery_previous) / discovery_previous * 100) if discovery_previous > 0 else 0
-            
-            if discovery_growth > 0:
-                insights.append({
-                    'type': 'success',
-                    'title': '🎯 디스커버리 브랜드 성장',
-                    'content': f'{current_col} 시즌 디스커버리 브랜드가 전년 대비 {discovery_growth:.1f}% 성장했습니다. 이는 시장에서 강력한 성과를 보이고 있음을 의미합니다.',
-                    'recommendation': '성장 모멘텀을 유지하기 위해 현재 마케팅 전략을 지속하세요.'
-                })
-            else:
-                insights.append({
-                    'type': 'warning',
-                    'title': '⚠️ 디스커버리 브랜드 주의',
-                    'content': f'{current_col} 시즌 디스커버리 브랜드가 전년 대비 {abs(discovery_growth):.1f}% 감소했습니다.',
-                    'recommendation': '마케팅 전략 재검토와 고객 유치 방안을 강화하세요.'
-                })
-        
-        # 2. 시장 점유율 분석
-        total_current = df[current_col].sum()
-        total_previous = df[previous_col].sum()
-        market_growth = ((total_current - total_previous) / total_previous * 100) if total_previous > 0 else 0
-        
-        if not discovery_data.empty:
-            discovery_share = (discovery_current / total_current) * 100
-            insights.append({
-                'type': 'info',
-                'title': '📊 시장 점유율 분석',
-                'content': f'디스커버리 브랜드의 현재 시장 점유율은 {discovery_share:.1f}%입니다. 전체 시장이 {market_growth:+.1f}% 성장한 상황에서의 점유율입니다.',
-                'recommendation': f'시장 점유율을 더욱 확대하려면 경쟁사 대비 차별화된 전략이 필요합니다.'
-            })
-        
-        # 3. 매장 효율성 분석
-        efficiency_data = df[df['매장 면적'] > 0].copy()
-        if not efficiency_data.empty:
-            efficiency_data['효율성'] = efficiency_data[current_col] / efficiency_data['매장 면적']
-            top_efficiency = efficiency_data.nlargest(1, '효율성')
-            
-            if not top_efficiency.empty:
-                best_store = top_efficiency.iloc[0]
-                insights.append({
-                    'type': 'success',
-                    'title': '🏆 최고 효율 매장 분석',
-                    'content': f'{best_store["매장명"]}({best_store["유통사"]}) 매장이 평당 {best_store["효율성"]/10000:.0f}만원의 최고 효율을 달성했습니다.',
-                    'recommendation': '최고 효율 매장의 운영 방식을 다른 매장에 적용하여 전체 효율성을 향상시키세요.'
-                })
-        
-        # 4. 트렌드 분석
-        if market_growth > 5:
-            insights.append({
-                'type': 'success',
-                'title': '📈 강력한 시장 성장',
-                'content': f'전체 시장이 {market_growth:.1f}%의 높은 성장률을 보이고 있습니다. 이는 시장 확장 기회를 의미합니다.',
-                'recommendation': '시장 성장에 맞춰 적극적인 확장 전략을 고려하세요.'
-            })
-        elif market_growth < -5:
-            insights.append({
-                'type': 'warning',
-                'title': '📉 시장 위축 우려',
-                'content': f'전체 시장이 {abs(market_growth):.1f}% 감소했습니다. 시장 환경이 어려운 상황입니다.',
-                'recommendation': '비용 최적화와 고객 유지 전략에 집중하세요.'
-            })
-        
-        return insights
-    
-    # AI 인사이트 생성
-    ai_insights = generate_ai_insights(filtered_df, season, current_col, previous_col)
-    
-    if ai_insights:
-        # 인사이트 카드 표시
-        for i, insight in enumerate(ai_insights):
-            with st.container():
-                if insight['type'] == 'success':
-                    st.success(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
-                elif insight['type'] == 'warning':
-                    st.warning(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
-                else:
-                    st.info(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
-                
-                if i < len(ai_insights) - 1:
-                    st.markdown("---")
-    else:
-        st.info("현재 데이터로 생성할 수 있는 AI 인사이트가 없습니다.")
-    
-    # 재미나이 2.5 연동 정보
-    st.markdown("### 🔗 재미나이 2.5 연동 정보")
-    st.info("""
-    **재미나이 2.5 AI 엔진**이 실시간으로 데이터를 분석하여 인사이트를 생성했습니다.
-    
-    - 🤖 **AI 분석**: 패턴 인식 및 트렌드 분석
-    - 📊 **자동 인사이트**: 데이터 기반 자동 해석
-    - 💡 **스마트 추천**: AI 기반 전략 제안
-    - 🔄 **실시간 업데이트**: 데이터 변경 시 자동 재분석
-    """)
     
     st.markdown("---")
     
