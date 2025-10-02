@@ -202,29 +202,32 @@ def main():
     # 브랜드별 매출 비교
     brand_comparison = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # 바 차트
-        fig = px.bar(
-            x=brand_comparison.values,
-            y=brand_comparison.index,
-            orientation='h',
-            title=f"브랜드별 {season}시즌 매출 TOP 10",
-            labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
-        )
-        fig.update_layout(height=500)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # 파이 차트
-        fig_pie = px.pie(
-            values=brand_comparison.values,
-            names=brand_comparison.index,
-            title=f"브랜드별 {season}시즌 매출 비중"
-        )
-        fig_pie.update_layout(height=500)
-        st.plotly_chart(fig_pie, use_container_width=True)
+    if not brand_comparison.empty:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # 바 차트
+            fig = px.bar(
+                x=brand_comparison.values,
+                y=brand_comparison.index,
+                orientation='h',
+                title=f"브랜드별 {season}시즌 매출 TOP 10",
+                labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
+            )
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # 파이 차트
+            fig_pie = px.pie(
+                values=brand_comparison.values,
+                names=brand_comparison.index,
+                title=f"브랜드별 {season}시즌 매출 비중"
+            )
+            fig_pie.update_layout(height=500)
+            st.plotly_chart(fig_pie, use_container_width=True)
+    else:
+        st.warning("선택한 조건에 해당하는 브랜드 데이터가 없습니다.")
     
     st.markdown("---")
     
