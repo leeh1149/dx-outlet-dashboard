@@ -307,8 +307,8 @@ def main():
         
         rank_changes = calculate_rank_change(brand_comparison_current, brand_comparison_previous)
         
-        # 차트용 TOP 10 데이터
-        chart_data_current = brand_comparison_current.head(10)
+        # 차트용 전체 데이터 (TOP 10 제한 해제)
+        chart_data_current = brand_comparison_current
         chart_data_previous = brand_comparison_previous.reindex(chart_data_current.index, fill_value=0)
         
         # 디스커버리 강조를 위한 색상 설정 (차트용)
@@ -322,24 +322,8 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # 최근 시즌과 직전 시즌 비교 바 차트 (TOP 10만 표시)
+            # 최근 시즌과 직전 시즌 비교 바 차트 (전체 브랜드 표시)
             fig = go.Figure()
-            
-            # 전년 시즌 바 (디스커버리는 노랑, 나머지는 연한 파랑)
-            previous_colors = []
-            for brand in chart_data_current.index:
-                if brand == '디스커버리':
-                    previous_colors.append('#FFD700')  # 노랑색
-                else:
-                    previous_colors.append('#87CEEB')  # 연한 파랑색
-            
-            fig.add_trace(go.Bar(
-                name=f'전년{season}시즌',
-                x=chart_data_current.index,
-                y=chart_data_previous.values,
-                marker_color=previous_colors,
-                opacity=0.7
-            ))
             
             # 현재 시즌 바 (디스커버리는 주황, 나머지는 진한 파랑)
             current_colors = []
@@ -357,20 +341,39 @@ def main():
                 opacity=0.9
             ))
             
+            # 전년 시즌 바 (디스커버리는 노랑, 나머지는 연한 파랑)
+            previous_colors = []
+            for brand in chart_data_current.index:
+                if brand == '디스커버리':
+                    previous_colors.append('#FFD700')  # 노랑색
+                else:
+                    previous_colors.append('#87CEEB')  # 연한 파랑색
+            
+            fig.add_trace(go.Bar(
+                name=f'전년{season}시즌',
+                x=chart_data_current.index,
+                y=chart_data_previous.values,
+                marker_color=previous_colors,
+                opacity=0.7
+            ))
+            
             # 제목과 y축 단위 설정
             if analysis_type == "총 매출 기준":
-                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 총 매출 비교 TOP 10"
+                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 총 매출 비교"
                 y_title = "총 매출 (원)"
             else:
-                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 평균 매출 비교 TOP 10"
+                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 평균 매출 비교"
                 y_title = "평균 매출 (원)"
+            
+            # 브랜드 수에 따라 차트 높이 조정
+            chart_height = max(500, len(chart_data_current) * 30)
             
             fig.update_layout(
                 title=title,
                 xaxis_title="브랜드",
                 yaxis_title=y_title,
                 barmode='group',
-                height=500,
+                height=chart_height,
                 showlegend=True
             )
             
@@ -393,9 +396,9 @@ def main():
             
             # 파이 차트 제목 설정
             if analysis_type == "총 매출 기준":
-                pie_title = f"브랜드별 {season}시즌 총 매출 비중 TOP 10"
+                pie_title = f"브랜드별 {season}시즌 총 매출 비중"
             else:
-                pie_title = f"브랜드별 {season}시즌 평균 매출 비중 TOP 10"
+                pie_title = f"브랜드별 {season}시즌 평균 매출 비중"
             
             fig_pie = px.pie(
                 values=chart_data_current.values,
