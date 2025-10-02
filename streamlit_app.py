@@ -129,60 +129,40 @@ def main():
             '평균매출 신장률': discovery_summary['평균매출_신장률']
         })
         
-        # 스타일이 적용된 테이블 표시
-        def create_styled_table(data):
-            html = f"""
-            <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
-            <thead>
-                <tr style="background-color: #f0f2f6;">
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">순위</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">유통사</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">매장수</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 총 매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 총 매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">총매출 신장률</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 평균매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 평균매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">평균매출 신장률</th>
-                </tr>
-            </thead>
-            <tbody>
-            """
-            
-            for _, row in data.iterrows():
-                # 신장률에 따른 색상 결정
-                total_growth_color = "color: #0066cc;" if row['총매출 신장률'] > 0 else "color: #cc0000;"
-                avg_growth_color = "color: #0066cc;" if row['평균매출 신장률'] > 0 else "color: #cc0000;"
-                
-                # 신장률 아이콘
-                total_growth_icon = "▲" if row['총매출 신장률'] > 0 else "▼"
-                avg_growth_icon = "▲" if row['평균매출 신장률'] > 0 else "▼"
-                
-                html += f"""
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{int(row['순위'])}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{row['유통사']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{int(row['매장수'])}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 총 매출']:,.0f}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 총 매출']:,.0f}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; {total_growth_color} font-weight: bold;">{total_growth_icon} {row['총매출 신장률']}%</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 평균매출']:,.0f}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 평균매출']:,.0f}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; {avg_growth_color} font-weight: bold;">{avg_growth_icon} {row['평균매출 신장률']}%</td>
-                </tr>
-                """
-            
-            html += """
-            </tbody>
-            </table>
-            </div>
-            """
-            
-            return html
+        # 신장률에 색상과 아이콘 추가
+        def format_growth_rate(value):
+            if value > 0:
+                return f"🔵 ▲ {value}%"
+            else:
+                return f"🔴 ▼ {value}%"
         
-        # 스타일이 적용된 테이블 표시
-        st.markdown(create_styled_table(result_df), unsafe_allow_html=True)
+        # 신장률 컬럼 포맷팅
+        result_df['총매출 신장률'] = result_df['총매출 신장률'].apply(format_growth_rate)
+        result_df['평균매출 신장률'] = result_df['평균매출 신장률'].apply(format_growth_rate)
+        
+        # 숫자 포맷팅
+        result_df[f'{season}시즌 총 매출'] = result_df[f'{season}시즌 총 매출'].apply(lambda x: f"{x:,.0f}")
+        result_df[f'전년{season}시즌 총 매출'] = result_df[f'전년{season}시즌 총 매출'].apply(lambda x: f"{x:,.0f}")
+        result_df[f'{season}시즌 평균매출'] = result_df[f'{season}시즌 평균매출'].apply(lambda x: f"{x:,.0f}")
+        result_df[f'전년{season}시즌 평균매출'] = result_df[f'전년{season}시즌 평균매출'].apply(lambda x: f"{x:,.0f}")
+        
+        # Streamlit 테이블 표시
+        st.dataframe(
+            result_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "순위": st.column_config.NumberColumn("순위", help="총 매출 기준 순위"),
+                "유통사": st.column_config.TextColumn("유통사", help="유통사명"),
+                "매장수": st.column_config.NumberColumn("매장수", help="매장 개수"),
+                f"{season}시즌 총 매출": st.column_config.TextColumn(f"{season}시즌 총 매출", help=f"{season}시즌 총 매출액"),
+                f"전년{season}시즌 총 매출": st.column_config.TextColumn(f"전년{season}시즌 총 매출", help=f"전년 {season}시즌 총 매출액"),
+                "총매출 신장률": st.column_config.TextColumn("총매출 신장률", help="총매출 증감률"),
+                f"{season}시즌 평균매출": st.column_config.TextColumn(f"{season}시즌 평균매출", help=f"{season}시즌 매장당 평균 매출"),
+                f"전년{season}시즌 평균매출": st.column_config.TextColumn(f"전년{season}시즌 평균매출", help=f"전년 {season}시즌 매장당 평균 매출"),
+                "평균매출 신장률": st.column_config.TextColumn("평균매출 신장률", help="평균매출 증감률")
+            }
+        )
     else:
         st.warning("선택한 조건에 해당하는 디스커버리 브랜드 데이터가 없습니다.")
     
