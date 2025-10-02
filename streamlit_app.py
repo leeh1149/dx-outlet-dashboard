@@ -435,36 +435,53 @@ def main():
             discovery_previous = brand_comparison_previous.get('디스커버리', 0)
             discovery_growth = ((discovery_current - discovery_previous) / discovery_previous * 100) if discovery_previous > 0 else 0
             
+            # 디스커버리 순위 변화 계산
+            discovery_rank_change = rank_changes.get('디스커버리', 0)
+            discovery_current_rank = list(brand_comparison_current.index).index('디스커버리') + 1
+            
+            # 시장 점유율 변화 계산
+            discovery_current_share = (discovery_current / brand_comparison_current.sum()) * 100
+            discovery_previous_share = (discovery_previous / brand_comparison_previous.sum()) * 100 if brand_comparison_previous.sum() > 0 else 0
+            discovery_share_change = discovery_current_share - discovery_previous_share
+            
             st.subheader("🎯 디스커버리 브랜드 성과")
+            
+            # 요약 정보 표시
+            if analysis_type == "총 매출 기준":
+                st.info(f"**매출 {discovery_current/100_000_000:.2f}억원** | **브랜드 순위 {discovery_current_rank}위{format_rank_change(discovery_current_rank, discovery_rank_change)[len(str(discovery_current_rank)):]}** | **시장 점유율 {discovery_current_share:.1f}%({discovery_share_change:+.1f}%)**")
+            else:
+                st.info(f"**평균 매출 {discovery_current/100_000_000:.2f}억원** | **브랜드 순위 {discovery_current_rank}위{format_rank_change(discovery_current_rank, discovery_rank_change)[len(str(discovery_current_rank)):]}** | **시장 점유율 {discovery_current_share:.1f}%({discovery_share_change:+.1f}%)**")
+            
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 if analysis_type == "총 매출 기준":
                     st.metric(
-                        f"{season}시즌 총 매출", 
+                        f"{current_col} 총 매출", 
                         f"{discovery_current/100_000_000:.2f}억원",
-                        delta=f"{discovery_growth:.1f}%"
+                        delta=f"{discovery_growth:+.1f}%"
                     )
                 else:
                     st.metric(
-                        f"{season}시즌 평균 매출", 
+                        f"{current_col} 평균 매출", 
                         f"{discovery_current/100_000_000:.2f}억원",
-                        delta=f"{discovery_growth:.1f}%"
+                        delta=f"{discovery_growth:+.1f}%"
                     )
             
             with col2:
-                discovery_rank = list(brand_comparison_current.index).index('디스커버리') + 1
-                st.metric("브랜드 순위", f"{discovery_rank}위")
+                rank_display = format_rank_change(discovery_current_rank, discovery_rank_change)
+                st.metric("브랜드 순위", rank_display)
             
             with col3:
-                discovery_share = (discovery_current / brand_comparison_current.sum()) * 100
-                st.metric("시장 점유율", f"{discovery_share:.1f}%")
+                st.metric("시장 점유율", f"{discovery_current_share:.1f}%", delta=f"{discovery_share_change:+.1f}%")
             
             with col4:
                 if discovery_growth > 0:
                     st.metric("성장률", f"🟢 ▲ {discovery_growth:.1f}%")
-                else:
+                elif discovery_growth < 0:
                     st.metric("성장률", f"🔴 ▼ {discovery_growth:.1f}%")
+                else:
+                    st.metric("성장률", f"⚪ {discovery_growth:.1f}%")
         
         # 상세 데이터 테이블
         if analysis_type == "총 매출 기준":
@@ -511,13 +528,40 @@ def main():
         
         table_df = pd.DataFrame(table_data)
         
+        # 합계 행 추가
+        total_current = brand_comparison_current.sum()
+        total_previous = brand_comparison_previous.sum()
+        total_growth = ((total_current - total_previous) / total_previous * 100) if total_previous > 0 else 0
+        
+        # 합계 행 데이터
+        if analysis_type == "총 매출 기준":
+            total_current_formatted = f"{total_current/100_000_000:.2f}억원"
+            total_previous_formatted = f"{total_previous/100_000_000:.2f}억원"
+        else:
+            total_current_formatted = f"{total_current/100_000_000:.2f}억원"
+            total_previous_formatted = f"{total_previous/100_000_000:.2f}억원"
+        
+        total_row = {
+            '순위변동': '',
+            '브랜드': '**합계**',
+            current_col_name: f"**{total_current_formatted}**",
+            previous_col_name: f"**{total_previous_formatted}**",
+            '증감률': f"**{total_growth:+.1f}%**"
+        }
+        
+        # 합계 행을 DataFrame에 추가
+        total_df = pd.DataFrame([total_row])
+        table_with_total = pd.concat([table_df, total_df], ignore_index=True)
+        
         # 디스커버리 행 강조를 위한 스타일링
-        def highlight_discovery(row):
+        def highlight_discovery_and_total(row):
             if row['브랜드'] == '디스커버리':
                 return ['background-color: #FFE6E6'] * len(row)
+            elif row['브랜드'] == '**합계**':
+                return ['background-color: #E6F3FF', 'font-weight: bold'] * len(row)
             return [''] * len(row)
         
-        styled_table = table_df.style.apply(highlight_discovery, axis=1)
+        styled_table = table_with_total.style.apply(highlight_discovery_and_total, axis=1)
         st.dataframe(styled_table, use_container_width=True, hide_index=True)
     
     else:
