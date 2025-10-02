@@ -621,9 +621,21 @@ def main():
             st.metric("평당매출 성장률", f"{efficiency_growth:+.1f}%")
         
         with col4:
-            # 디스커버리 매장 수
-            discovery_stores = len(efficiency_data[efficiency_data['유통사'] == '디스커버리'])
-            st.metric("디스커버리 매장", f"{discovery_stores}개")
+            # 효율 1위 유통사 분석
+            top_efficiency_store = efficiency_data.iloc[0]  # 25SS 평당매출 기준 1위
+            top_distributor = top_efficiency_store['유통사']
+            top_efficiency_value = top_efficiency_store['25SS_평당매출']
+            
+            # 해당 유통사의 평균 효율성 계산
+            distributor_stores = efficiency_data[efficiency_data['유통사'] == top_distributor]
+            distributor_avg_efficiency = distributor_stores['25SS_평당매출'].mean()
+            distributor_store_count = len(distributor_stores)
+            
+            st.metric(
+                "효율 1위 유통사", 
+                f"{top_distributor}",
+                help=f"평균 {distributor_avg_efficiency/10000:.0f}만원/평 ({distributor_store_count}개 매장)"
+            )
         
     else:
         st.warning("매장 면적 데이터가 있는 매장이 없습니다.")
