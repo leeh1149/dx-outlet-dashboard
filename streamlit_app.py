@@ -129,37 +129,76 @@ def main():
             '평균매출 신장률': discovery_summary['평균매출_신장률']
         })
         
-        # 신장률에 색상과 아이콘 추가
+        # 금액을 억원 단위로 변환하는 함수
+        def format_amount(value):
+            if value == 0:
+                return "0억원"
+            amount_in_hundred_millions = value / 100_000_000  # 억원 단위
+            if amount_in_hundred_millions >= 1:
+                return f"{amount_in_hundred_millions:.2f}억원"
+            else:
+                return f"{value/10_000:.0f}만원"
+        
+        # 신장률 포맷팅 (색상과 아이콘)
         def format_growth_rate(value):
             if value > 0:
-                return f"🔵 ▲ {value}%"
+                return f"▲ {value}%"
             else:
-                return f"🔴 ▼ {value}%"
+                return f"▼ {value}%"
         
-        # 신장률 컬럼 포맷팅
+        # 순위 변동 계산 (전년 대비 순위 변화)
+        # 전년 순위를 계산하기 위해 전년 데이터로 정렬
+        discovery_summary_prev = discovery_df.groupby('유통사')[previous_col].sum().sort_values(ascending=False).reset_index()
+        discovery_summary_prev['전년순위'] = discovery_summary_prev.index + 1
+        
+        # 현재 데이터와 전년 순위 매핑
+        result_df = result_df.merge(discovery_summary_prev[['유통사', '전년순위']], on='유통사', how='left')
+        result_df['순위변동'] = result_df['순위'] - result_df['전년순위']
+        
+        # 순위 변동 포맷팅
+        def format_rank_change(rank, change):
+            if change == 0:
+                return f"{rank}(-)"
+            elif change > 0:
+                return f"{rank}(▼{change})"
+            else:
+                return f"{rank}(▲{abs(change)})"
+        
+        result_df['순위변동표시'] = result_df.apply(lambda x: format_rank_change(x['순위'], x['순위변동']), axis=1)
+        
+        # 금액 포맷팅
+        result_df[f'{season}시즌 총 매출'] = result_df[f'{season}시즌 총 매출'].apply(format_amount)
+        result_df[f'전년{season}시즌 총 매출'] = result_df[f'전년{season}시즌 총 매출'].apply(format_amount)
+        result_df[f'{season}시즌 평균매출'] = result_df[f'{season}시즌 평균매출'].apply(format_amount)
+        result_df[f'전년{season}시즌 평균매출'] = result_df[f'전년{season}시즌 평균매출'].apply(format_amount)
+        
+        # 신장률 포맷팅
         result_df['총매출 신장률'] = result_df['총매출 신장률'].apply(format_growth_rate)
         result_df['평균매출 신장률'] = result_df['평균매출 신장률'].apply(format_growth_rate)
         
-        # 숫자 포맷팅
-        result_df[f'{season}시즌 총 매출'] = result_df[f'{season}시즌 총 매출'].apply(lambda x: f"{x:,.0f}")
-        result_df[f'전년{season}시즌 총 매출'] = result_df[f'전년{season}시즌 총 매출'].apply(lambda x: f"{x:,.0f}")
-        result_df[f'{season}시즌 평균매출'] = result_df[f'{season}시즌 평균매출'].apply(lambda x: f"{x:,.0f}")
-        result_df[f'전년{season}시즌 평균매출'] = result_df[f'전년{season}시즌 평균매출'].apply(lambda x: f"{x:,.0f}")
+        # 표시할 컬럼만 선택
+        display_columns = [
+            '순위변동표시', '유통사', '매장수', 
+            f'{season}시즌 총 매출', f'전년{season}시즌 총 매출', '총매출 신장률',
+            f'{season}시즌 평균매출', f'전년{season}시즌 평균매출', '평균매출 신장률'
+        ]
+        
+        display_df = result_df[display_columns]
         
         # Streamlit 테이블 표시
         st.dataframe(
-            result_df,
+            display_df,
             use_container_width=True,
             hide_index=True,
             column_config={
-                "순위": st.column_config.NumberColumn("순위", help="총 매출 기준 순위"),
+                "순위변동표시": st.column_config.TextColumn("순위", help="순위 및 전년 대비 변동"),
                 "유통사": st.column_config.TextColumn("유통사", help="유통사명"),
                 "매장수": st.column_config.NumberColumn("매장수", help="매장 개수"),
-                f"{season}시즌 총 매출": st.column_config.TextColumn(f"{season}시즌 총 매출", help=f"{season}시즌 총 매출액"),
-                f"전년{season}시즌 총 매출": st.column_config.TextColumn(f"전년{season}시즌 총 매출", help=f"전년 {season}시즌 총 매출액"),
+                f"{season}시즌 총 매출": st.column_config.TextColumn(f"{season}시즌 총 매출", help=f"{season}시즌 총 매출액 (억원)"),
+                f"전년{season}시즌 총 매출": st.column_config.TextColumn(f"전년{season}시즌 총 매출", help=f"전년 {season}시즌 총 매출액 (억원)"),
                 "총매출 신장률": st.column_config.TextColumn("총매출 신장률", help="총매출 증감률"),
-                f"{season}시즌 평균매출": st.column_config.TextColumn(f"{season}시즌 평균매출", help=f"{season}시즌 매장당 평균 매출"),
-                f"전년{season}시즌 평균매출": st.column_config.TextColumn(f"전년{season}시즌 평균매출", help=f"전년 {season}시즌 매장당 평균 매출"),
+                f"{season}시즌 평균매출": st.column_config.TextColumn(f"{season}시즌 평균매출", help=f"{season}시즌 매장당 평균 매출 (억원)"),
+                f"전년{season}시즌 평균매출": st.column_config.TextColumn(f"전년{season}시즌 평균매출", help=f"전년 {season}시즌 매장당 평균 매출 (억원)"),
                 "평균매출 신장률": st.column_config.TextColumn("평균매출 신장률", help="평균매출 증감률")
             }
         )
