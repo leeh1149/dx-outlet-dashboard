@@ -76,23 +76,20 @@ def analyze_discovery_sales(df, season):
     discovery_summary = discovery_summary.sort_values(current_col, ascending=False).reset_index(drop=True)
     discovery_summary['순위'] = discovery_summary.index + 1
     
-    # 컬럼명 정리
-    discovery_summary = discovery_summary.rename(columns={
-        current_col: f'{season}시즌 총 매출',
-        previous_col: f'전년{season}시즌 총 매출',
-        '현재_평균매출': f'{season}시즌 평균매출',
-        '전년_평균매출': f'전년{season}시즌 평균매출',
-        '총매출_신장률': '총매출 신장률',
-        '평균매출_신장률': '평균매출 신장률'
+    # 새로운 데이터프레임 생성 (안전한 방법)
+    result_df = pd.DataFrame({
+        '순위': discovery_summary['순위'],
+        '유통사': discovery_summary['유통사'],
+        '매장수': discovery_summary['매장수'],
+        f'{season}시즌 총 매출': discovery_summary[current_col],
+        f'전년{season}시즌 총 매출': discovery_summary[previous_col],
+        '총매출 신장률': discovery_summary['총매출_신장률'],
+        f'{season}시즌 평균매출': discovery_summary['현재_평균매출'],
+        f'전년{season}시즌 평균매출': discovery_summary['전년_평균매출'],
+        '평균매출 신장률': discovery_summary['평균매출_신장률']
     })
     
-    # 컬럼 순서 정리
-    result_columns = ['순위', '유통사', '매장수', f'{season}시즌 총 매출', f'전년{season}시즌 총 매출', 
-                     '총매출 신장률', f'{season}시즌 평균매출', f'전년{season}시즌 평균매출', '평균매출 신장률']
-    
-    discovery_summary = discovery_summary[result_columns]
-    
-    return discovery_summary
+    return result_df
 
 # 메인 함수
 def main():
