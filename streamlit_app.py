@@ -236,6 +236,14 @@ def main():
     # 2. 동업계 MS 현황
     st.subheader("📈 동업계 MS 현황")
     
+    # 분석 기준 선택
+    analysis_type = st.radio(
+        "분석 기준 선택",
+        ["총 매출 기준", "평균 매출 기준"],
+        horizontal=True,
+        key="ms_analysis_type"
+    )
+    
     # 전체 브랜드 매출 비교
     if season == 'SS':
         current_col = '25SS'
@@ -244,9 +252,22 @@ def main():
         current_col = '24FW'  # 25FW가 없으므로 24FW 사용
         previous_col = '23FW'
     
-    # 브랜드별 매출 비교 (최근 시즌과 직전 시즌)
-    brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
-    brand_comparison_previous = filtered_df.groupby('브랜드')[previous_col].sum()
+    if analysis_type == "총 매출 기준":
+        # 브랜드별 총 매출 비교 (최근 시즌과 직전 시즌)
+        brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+        brand_comparison_previous = filtered_df.groupby('브랜드')[previous_col].sum()
+    else:
+        # 브랜드별 평균 매출 비교 (매장 매출이 0인 경우 제외)
+        # 매장별 매출이 0이 아닌 데이터만 필터링
+        valid_current = filtered_df[filtered_df[current_col] > 0]
+        valid_previous = filtered_df[filtered_df[previous_col] > 0]
+        
+        # 브랜드별 평균 매출 계산
+        current_avg = valid_current.groupby('브랜드')[current_col].mean().sort_values(ascending=False).head(10)
+        previous_avg = valid_previous.groupby('브랜드')[previous_col].mean()
+        
+        brand_comparison_current = current_avg
+        brand_comparison_previous = previous_avg
     
     if not brand_comparison_current.empty:
         # 디스커버리 강조를 위한 색상 설정
@@ -300,10 +321,18 @@ def main():
                 opacity=0.9
             ))
             
+            # 제목과 y축 단위 설정
+            if analysis_type == "총 매출 기준":
+                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 총 매출 비교 TOP 10"
+                y_title = "총 매출 (원)"
+            else:
+                title = f"브랜드별 {season}시즌 vs 전년{season}시즌 평균 매출 비교 TOP 10"
+                y_title = "평균 매출 (원)"
+            
             fig.update_layout(
-                title=f"브랜드별 {season}시즌 vs 전년{season}시즌 매출 비교 TOP 10",
+                title=title,
                 xaxis_title="브랜드",
-                yaxis_title="매출 (원)",
+                yaxis_title=y_title,
                 barmode='group',
                 height=500,
                 showlegend=True
@@ -323,10 +352,16 @@ def main():
                 else:
                     pie_colors.append('#4ECDC4')  # 기본 색상
             
+            # 파이 차트 제목 설정
+            if analysis_type == "총 매출 기준":
+                pie_title = f"브랜드별 {season}시즌 총 매출 비중 TOP 10"
+            else:
+                pie_title = f"브랜드별 {season}시즌 평균 매출 비중 TOP 10"
+            
             fig_pie = px.pie(
                 values=brand_comparison_current.values,
                 names=brand_comparison_current.index,
-                title=f"브랜드별 {season}시즌 매출 비중 TOP 10",
+                title=pie_title,
                 color_discrete_sequence=pie_colors
             )
             
@@ -350,11 +385,18 @@ def main():
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric(
-                    f"{season}시즌 매출", 
-                    f"{discovery_current/100_000_000:.2f}억원",
-                    delta=f"{discovery_growth:.1f}%"
-                )
+                if analysis_type == "총 매출 기준":
+                    st.metric(
+                        f"{season}시즌 총 매출", 
+                        f"{discovery_current/100_000_000:.2f}억원",
+                        delta=f"{discovery_growth:.1f}%"
+                    )
+                else:
+                    st.metric(
+                        f"{season}시즌 평균 매출", 
+                        f"{discovery_current/100_000_000:.2f}억원",
+                        delta=f"{discovery_growth:.1f}%"
+                    )
             
             with col2:
                 discovery_rank = list(brand_comparison_current.index).index('디스커버리') + 1
@@ -369,6 +411,43 @@ def main():
                     st.metric("성장률", f"🟢 ▲ {discovery_growth:.1f}%")
                 else:
                     st.metric("성장률", f"🔴 ▼ {discovery_growth:.1f}%")
+        
+        # 상세 데이터 테이블
+        st.subheader("📋 상세 데이터")
+        
+        # 테이블 데이터 준비
+        table_data = []
+        for i, brand in enumerate(brand_comparison_current.index):
+            current_val = brand_comparison_current[brand]
+            previous_val = brand_comparison_previous.get(brand, 0)
+            growth = ((current_val - previous_val) / previous_val * 100) if previous_val > 0 else 0
+            
+            # 금액 포맷팅
+            if analysis_type == "총 매출 기준":
+                current_formatted = f"{current_val/100_000_000:.2f}억원"
+                previous_formatted = f"{previous_val/100_000_000:.2f}억원"
+            else:
+                current_formatted = f"{current_val/100_000_000:.2f}억원"
+                previous_formatted = f"{previous_val/100_000_000:.2f}억원"
+            
+            table_data.append({
+                '순위': i + 1,
+                '브랜드': brand,
+                f'{season}시즌': current_formatted,
+                f'전년{season}시즌': previous_formatted,
+                '증감률': f"{growth:+.1f}%"
+            })
+        
+        table_df = pd.DataFrame(table_data)
+        
+        # 디스커버리 행 강조를 위한 스타일링
+        def highlight_discovery(row):
+            if row['브랜드'] == '디스커버리':
+                return ['background-color: #FFE6E6'] * len(row)
+            return [''] * len(row)
+        
+        styled_table = table_df.style.apply(highlight_discovery, axis=1)
+        st.dataframe(styled_table, use_container_width=True, hide_index=True)
     
     else:
         st.warning("선택한 조건에 해당하는 브랜드 데이터가 없습니다.")
