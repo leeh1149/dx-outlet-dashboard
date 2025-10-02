@@ -522,14 +522,18 @@ def main():
     st.markdown("---")
     
     # 3. 아울렛 매장 효율
-    st.subheader("⚡ 아울렛 매장 효율")
+    st.subheader("⚡ 아울렛 매장 효율-디스커버리")
     
-    # 매장 면적 대비 매출 효율성
+    # 매장 면적 대비 매출 효율성 (평 단위 기준)
     efficiency_data = filtered_df[filtered_df['매장 면적'] > 0].copy()
     if not efficiency_data.empty:
-        # 현재 시즌과 이전 시즌의 평당 매출 계산
-        efficiency_data['25SS_평당매출'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
-        efficiency_data['24SS_평당매출'] = efficiency_data['24SS'] / efficiency_data['매장 면적']
+        # 매장 면적을 평 단위로 변환 (CSV의 매장 면적이 평 단위)
+        efficiency_data['매장면적_평'] = efficiency_data['매장 면적']
+        efficiency_data['매장면적_제곱미터'] = efficiency_data['매장 면적'] * 3.3058  # 1평 = 3.3058㎡
+        
+        # 현재 시즌과 이전 시즌의 평당 매출 계산 (평 기준)
+        efficiency_data['25SS_평당매출'] = efficiency_data['25SS'] / efficiency_data['매장면적_평']
+        efficiency_data['24SS_평당매출'] = efficiency_data['24SS'] / efficiency_data['매장면적_평']
         
         # 평당 매출 기준으로 정렬 (25SS 기준)
         efficiency_data = efficiency_data.sort_values('25SS_평당매출', ascending=False).reset_index(drop=True)
@@ -577,9 +581,9 @@ def main():
                 '순위변동': format_rank_change_outlet(i + 1, rank_change),
                 '매장명': row['매장명'],
                 '유통사': row['유통사'],
-                '매장면적': f"{row['매장 면적']:.0f}㎡",
-                '25SS_평당매출': f"{row['25SS_평당매출']/10000:.0f}만원/㎡",
-                '24SS_평당매출': f"{row['24SS_평당매출']/10000:.0f}만원/㎡",
+                '매장면적': f"{row['매장면적_평']:.1f}평({row['매장면적_제곱미터']:.1f}㎡)",
+                '25SS_평당매출': f"{row['25SS_평당매출']/10000:.0f}만원/평",
+                '24SS_평당매출': f"{row['24SS_평당매출']/10000:.0f}만원/평",
                 '평당매출_신장률': f"{평당매출_신장률:+.1f}%",
                 '25SS_총매출': f"{row['25SS']/100_000_000:.2f}억원",
                 '24SS_총매출': f"{row['24SS']/100_000_000:.2f}억원",
@@ -609,7 +613,7 @@ def main():
         
         with col2:
             avg_efficiency_25 = efficiency_data['25SS_평당매출'].mean()
-            st.metric("25SS 평균 평당매출", f"{avg_efficiency_25/10000:.0f}만원/㎡")
+            st.metric("25SS 평균 평당매출", f"{avg_efficiency_25/10000:.0f}만원/평")
         
         with col3:
             avg_efficiency_24 = efficiency_data['24SS_평당매출'].mean()
