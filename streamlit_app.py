@@ -142,9 +142,11 @@ def main():
         # 신장률 포맷팅 (색상과 아이콘)
         def format_growth_rate(value):
             if value > 0:
-                return f"▲ {value}%"
+                return f"🟢 ▲ {value}%"
+            elif value < 0:
+                return f"🔴 ▼ {value}%"
             else:
-                return f"▼ {value}%"
+                return f"⚪ {value}%"
         
         # 순위 변동 계산 (전년 대비 순위 변화)
         # 전년 순위를 계산하기 위해 전년 데이터로 정렬
@@ -158,11 +160,11 @@ def main():
         # 순위 변동 포맷팅
         def format_rank_change(rank, change):
             if change == 0:
-                return f"{rank}(-)"
+                return f"{rank} ⚪(-)"
             elif change > 0:
-                return f"{rank}(▼{change})"
+                return f"{rank} 🔴▼{change}"
             else:
-                return f"{rank}(▲{abs(change)})"
+                return f"{rank} 🟢▲{abs(change)}"
         
         result_df['순위변동표시'] = result_df.apply(lambda x: format_rank_change(x['순위'], x['순위변동']), axis=1)
         
@@ -185,7 +187,31 @@ def main():
         
         display_df = result_df[display_columns]
         
-        # Streamlit 데이터프레임으로 표시
+        # 주요 지표 메트릭 카드
+        st.subheader("📊 주요 지표")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            total_stores = discovery_summary['매장수'].sum()
+            st.metric("총 매장 수", f"{total_stores}개")
+        
+        with col2:
+            total_sales = discovery_summary[current_col].sum()
+            formatted_sales = format_amount(total_sales)
+            st.metric(f"{season}시즌 총 매출", formatted_sales)
+        
+        with col3:
+            avg_growth = discovery_summary['총매출_신장률'].mean()
+            st.metric("평균 신장률", f"{avg_growth:.1f}%")
+        
+        with col4:
+            top_distributor = discovery_summary.iloc[0]['유통사']
+            st.metric("1위 유통사", top_distributor)
+        
+        st.markdown("---")
+        
+        # 상세 테이블
+        st.subheader("📋 상세 분석")
         st.dataframe(
             display_df,
             use_container_width=True,
