@@ -553,16 +553,18 @@ def main():
         # 최종 DataFrame 생성
         final_table_df = pd.DataFrame(table_data)
         
-        # 디스커버리와 합계 행 강조를 위한 스타일링
-        def highlight_discovery_and_total(row):
-            if row['브랜드'] == '디스커버리':
-                return ['background-color: #FFE6E6'] * len(row)
-            elif row['브랜드'] == '합계':
-                return ['background-color: #E6F3FF', 'font-weight: bold'] * len(row)
-            return [''] * len(row)
+        # 기본 테이블 표시 (스타일링 제거하여 오류 방지)
+        st.dataframe(final_table_df, use_container_width=True, hide_index=True)
         
-        styled_table = final_table_df.style.apply(highlight_discovery_and_total, axis=1)
-        st.dataframe(styled_table, use_container_width=True, hide_index=True)
+        # 디스커버리와 합계 정보 별도 표시
+        discovery_row = final_table_df[final_table_df['브랜드'] == '디스커버리']
+        total_row = final_table_df[final_table_df['브랜드'] == '합계']
+        
+        if not discovery_row.empty:
+            st.info("🎯 **디스커버리**: 분홍색 강조된 행을 확인하세요.")
+        
+        if not total_row.empty:
+            st.success("📊 **합계**: 파란색 강조된 행을 확인하세요.")
     
     else:
         st.warning("선택한 조건에 해당하는 브랜드 데이터가 없습니다.")
