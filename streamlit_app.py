@@ -237,12 +237,19 @@ def main():
     st.subheader("📈 동업계 MS 현황")
     
     # 분석 기준 선택
+    st.markdown("**📊 분석 기준을 선택하세요:**")
     analysis_type = st.radio(
-        "분석 기준 선택",
+        "",
         ["총 매출 기준", "평균 매출 기준"],
         horizontal=True,
         key="ms_analysis_type"
     )
+    
+    # 선택된 분석 기준 표시
+    if analysis_type == "총 매출 기준":
+        st.info("📈 **총 매출 기준**: 브랜드별 전체 매출 합계로 비교합니다.")
+    else:
+        st.info("📊 **평균 매출 기준**: 브랜드별 매장당 평균 매출로 비교합니다. (매출 0인 매장 제외)")
     
     # 전체 브랜드 매출 비교
     if season == 'SS':
@@ -256,6 +263,10 @@ def main():
         # 브랜드별 총 매출 비교 (최근 시즌과 직전 시즌)
         brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
         brand_comparison_previous = filtered_df.groupby('브랜드')[previous_col].sum()
+        
+        # 디버깅 정보
+        st.caption(f"총 매출 기준: {len(brand_comparison_current)}개 브랜드 분석")
+        
     else:
         # 브랜드별 평균 매출 비교 (매장 매출이 0인 경우 제외)
         # 매장별 매출이 0이 아닌 데이터만 필터링
@@ -268,6 +279,9 @@ def main():
         
         brand_comparison_current = current_avg
         brand_comparison_previous = previous_avg
+        
+        # 디버깅 정보
+        st.caption(f"평균 매출 기준: {len(brand_comparison_current)}개 브랜드 분석 (유효 매장만 포함)")
     
     if not brand_comparison_current.empty:
         # 디스커버리 강조를 위한 색상 설정
@@ -413,7 +427,10 @@ def main():
                     st.metric("성장률", f"🔴 ▼ {discovery_growth:.1f}%")
         
         # 상세 데이터 테이블
-        st.subheader("📋 상세 데이터")
+        if analysis_type == "총 매출 기준":
+            st.subheader("📋 상세 데이터 - 총 매출 기준")
+        else:
+            st.subheader("📋 상세 데이터 - 평균 매출 기준")
         
         # 테이블 데이터 준비
         table_data = []
@@ -426,15 +443,19 @@ def main():
             if analysis_type == "총 매출 기준":
                 current_formatted = f"{current_val/100_000_000:.2f}억원"
                 previous_formatted = f"{previous_val/100_000_000:.2f}억원"
+                current_col_name = f'{season}시즌 총매출'
+                previous_col_name = f'전년{season}시즌 총매출'
             else:
                 current_formatted = f"{current_val/100_000_000:.2f}억원"
                 previous_formatted = f"{previous_val/100_000_000:.2f}억원"
+                current_col_name = f'{season}시즌 평균매출'
+                previous_col_name = f'전년{season}시즌 평균매출'
             
             table_data.append({
                 '순위': i + 1,
                 '브랜드': brand,
-                f'{season}시즌': current_formatted,
-                f'전년{season}시즌': previous_formatted,
+                current_col_name: current_formatted,
+                previous_col_name: previous_formatted,
                 '증감률': f"{growth:+.1f}%"
             })
         
