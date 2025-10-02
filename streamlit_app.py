@@ -48,6 +48,9 @@ def main():
     # 사이드바 필터
     st.sidebar.header("🔍 필터 옵션")
     
+    # 시즌 선택
+    season = st.sidebar.selectbox("시즌 선택", ['SS', 'FW'], key="season_selector")
+    
     # 유통사 필터
     distributors = ['전체'] + sorted(df['유통사'].unique().tolist())
     selected_distributor = st.sidebar.selectbox("유통사 선택", distributors)
@@ -68,9 +71,6 @@ def main():
     
     if selected_store != '전체':
         filtered_df = filtered_df[filtered_df['매장명'] == selected_store]
-    
-    # 시즌 선택
-    season = st.selectbox("시즌 선택", ['SS', 'FW'], key="season_selector")
     
     st.markdown("---")
     
