@@ -261,7 +261,7 @@ def main():
     
     if analysis_type == "총 매출 기준":
         # 브랜드별 총 매출 비교 (최근 시즌과 직전 시즌)
-        brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+        brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False)
         brand_comparison_previous = filtered_df.groupby('브랜드')[previous_col].sum()
         
         # 디버깅 정보
@@ -274,7 +274,7 @@ def main():
         valid_previous = filtered_df[filtered_df[previous_col] > 0]
         
         # 브랜드별 평균 매출 계산
-        current_avg = valid_current.groupby('브랜드')[current_col].mean().sort_values(ascending=False).head(10)
+        current_avg = valid_current.groupby('브랜드')[current_col].mean().sort_values(ascending=False)
         previous_avg = valid_previous.groupby('브랜드')[previous_col].mean()
         
         brand_comparison_current = current_avg
@@ -284,9 +284,36 @@ def main():
         st.caption(f"평균 매출 기준: {len(brand_comparison_current)}개 브랜드 분석 (유효 매장만 포함)")
     
     if not brand_comparison_current.empty:
-        # 디스커버리 강조를 위한 색상 설정
+        # 순위 변화 계산
+        def calculate_rank_change(current_series, previous_series):
+            # 현재 순위
+            current_rank = {brand: rank + 1 for rank, brand in enumerate(current_series.index)}
+            
+            # 이전 순위
+            previous_rank = {brand: rank + 1 for rank, brand in enumerate(previous_series.sort_values(ascending=False).index)}
+            
+            # 순위 변화 계산
+            rank_changes = {}
+            for brand in current_rank:
+                current_pos = current_rank[brand]
+                previous_pos = previous_rank.get(brand, None)
+                
+                if previous_pos is None:
+                    rank_changes[brand] = 0  # 새로 등장한 브랜드
+                else:
+                    rank_changes[brand] = previous_pos - current_pos  # 양수면 상승, 음수면 하락
+            
+            return rank_changes
+        
+        rank_changes = calculate_rank_change(brand_comparison_current, brand_comparison_previous)
+        
+        # 차트용 TOP 10 데이터
+        chart_data_current = brand_comparison_current.head(10)
+        chart_data_previous = brand_comparison_previous.reindex(chart_data_current.index, fill_value=0)
+        
+        # 디스커버리 강조를 위한 색상 설정 (차트용)
         colors = []
-        for brand in brand_comparison_current.index:
+        for brand in chart_data_current.index:
             if brand == '디스커버리':
                 colors.append('#FF6B6B')  # 빨간색으로 강조
             else:
@@ -295,42 +322,37 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # 최근 시즌과 직전 시즌 비교 바 차트
-            comparison_data = []
-            for brand in brand_comparison_current.index:
-                current_val = brand_comparison_current[brand]
-                previous_val = brand_comparison_previous.get(brand, 0)
-                comparison_data.append({
-                    '브랜드': brand,
-                    '현재시즌': current_val,
-                    '전년시즌': previous_val
-                })
-            
-            comparison_df = pd.DataFrame(comparison_data)
-            
+            # 최근 시즌과 직전 시즌 비교 바 차트 (TOP 10만 표시)
             fig = go.Figure()
             
-            # 전년 시즌 바
+            # 전년 시즌 바 (디스커버리는 노랑, 나머지는 연한 파랑)
+            previous_colors = []
+            for brand in chart_data_current.index:
+                if brand == '디스커버리':
+                    previous_colors.append('#FFD700')  # 노랑색
+                else:
+                    previous_colors.append('#87CEEB')  # 연한 파랑색
+            
             fig.add_trace(go.Bar(
                 name=f'전년{season}시즌',
-                x=comparison_df['브랜드'],
-                y=comparison_df['전년시즌'],
-                marker_color='lightblue',
+                x=chart_data_current.index,
+                y=chart_data_previous.values,
+                marker_color=previous_colors,
                 opacity=0.7
             ))
             
-            # 현재 시즌 바 (디스커버리 강조)
+            # 현재 시즌 바 (디스커버리는 주황, 나머지는 진한 파랑)
             current_colors = []
-            for brand in comparison_df['브랜드']:
+            for brand in chart_data_current.index:
                 if brand == '디스커버리':
-                    current_colors.append('#FF6B6B')
+                    current_colors.append('#FF8C00')  # 주황색
                 else:
-                    current_colors.append('#4ECDC4')
+                    current_colors.append('#4682B4')  # 진한 파랑색
             
             fig.add_trace(go.Bar(
                 name=f'{season}시즌',
-                x=comparison_df['브랜드'],
-                y=comparison_df['현재시즌'],
+                x=chart_data_current.index,
+                y=chart_data_current.values,
                 marker_color=current_colors,
                 opacity=0.9
             ))
@@ -358,13 +380,16 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            # 파이 차트 (디스커버리 강조)
+            # 파이 차트 (브랜드별 다른 색상)
+            import plotly.colors as pc
             pie_colors = []
-            for brand in brand_comparison_current.index:
+            color_palette = pc.qualitative.Set3  # 다양한 색상 팔레트
+            
+            for i, brand in enumerate(chart_data_current.index):
                 if brand == '디스커버리':
-                    pie_colors.append('#FF6B6B')  # 빨간색으로 강조
+                    pie_colors.append('#FF6B6B')  # 디스커버리는 빨간색
                 else:
-                    pie_colors.append('#4ECDC4')  # 기본 색상
+                    pie_colors.append(color_palette[i % len(color_palette)])  # 다른 브랜드는 팔레트 색상
             
             # 파이 차트 제목 설정
             if analysis_type == "총 매출 기준":
@@ -373,8 +398,8 @@ def main():
                 pie_title = f"브랜드별 {season}시즌 평균 매출 비중 TOP 10"
             
             fig_pie = px.pie(
-                values=brand_comparison_current.values,
-                names=brand_comparison_current.index,
+                values=chart_data_current.values,
+                names=chart_data_current.index,
                 title=pie_title,
                 color_discrete_sequence=pie_colors
             )
@@ -383,8 +408,15 @@ def main():
             fig_pie.update_traces(
                 textposition='inside',
                 textinfo='percent+label',
-                hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>'
+                hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>',
+                marker_line=dict(width=2, color='white')
             )
+            
+            # 디스커버리 부분만 더 두꺼운 테두리 적용
+            for i, brand in enumerate(chart_data_current.index):
+                if brand == '디스커버리':
+                    fig_pie.data[0].marker.line.width = [6 if j == i else 2 for j in range(len(chart_data_current))]
+                    fig_pie.data[0].marker.line.color = ['red' if j == i else 'white' for j in range(len(chart_data_current))]
             
             fig_pie.update_layout(height=500)
             st.plotly_chart(fig_pie, use_container_width=True)
@@ -432,12 +464,22 @@ def main():
         else:
             st.subheader("📋 상세 데이터 - 평균 매출 기준")
         
+        # 순위 변화 포맷팅 함수
+        def format_rank_change(rank, change):
+            if change == 0:
+                return f"{rank}(-)"
+            elif change > 0:
+                return f"{rank}(▲{change})"
+            else:
+                return f"{rank}(▼{abs(change)})"
+        
         # 테이블 데이터 준비
         table_data = []
         for i, brand in enumerate(brand_comparison_current.index):
             current_val = brand_comparison_current[brand]
             previous_val = brand_comparison_previous.get(brand, 0)
             growth = ((current_val - previous_val) / previous_val * 100) if previous_val > 0 else 0
+            rank_change = rank_changes.get(brand, 0)
             
             # 금액 포맷팅
             if analysis_type == "총 매출 기준":
@@ -452,7 +494,7 @@ def main():
                 previous_col_name = f'전년{season}시즌 평균매출'
             
             table_data.append({
-                '순위': i + 1,
+                '순위변동': format_rank_change(i + 1, rank_change),
                 '브랜드': brand,
                 current_col_name: current_formatted,
                 previous_col_name: previous_formatted,
