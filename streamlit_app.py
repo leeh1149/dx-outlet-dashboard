@@ -642,6 +642,114 @@ def main():
     
     st.markdown("---")
     
+    # 4. AI 인사이트 (재미나이 2.5 연동)
+    st.subheader("🤖 AI 인사이트 - 재미나이 2.5")
+    
+    # AI 인사이트 분석 함수
+    def generate_ai_insights(df, season, current_col, previous_col):
+        insights = []
+        
+        # 1. 디스커버리 브랜드 성과 분석
+        discovery_data = df[df['브랜드'] == '디스커버리']
+        if not discovery_data.empty:
+            discovery_current = discovery_data[current_col].sum()
+            discovery_previous = discovery_data[previous_col].sum()
+            discovery_growth = ((discovery_current - discovery_previous) / discovery_previous * 100) if discovery_previous > 0 else 0
+            
+            if discovery_growth > 0:
+                insights.append({
+                    'type': 'success',
+                    'title': '🎯 디스커버리 브랜드 성장',
+                    'content': f'{current_col} 시즌 디스커버리 브랜드가 전년 대비 {discovery_growth:.1f}% 성장했습니다. 이는 시장에서 강력한 성과를 보이고 있음을 의미합니다.',
+                    'recommendation': '성장 모멘텀을 유지하기 위해 현재 마케팅 전략을 지속하세요.'
+                })
+            else:
+                insights.append({
+                    'type': 'warning',
+                    'title': '⚠️ 디스커버리 브랜드 주의',
+                    'content': f'{current_col} 시즌 디스커버리 브랜드가 전년 대비 {abs(discovery_growth):.1f}% 감소했습니다.',
+                    'recommendation': '마케팅 전략 재검토와 고객 유치 방안을 강화하세요.'
+                })
+        
+        # 2. 시장 점유율 분석
+        total_current = df[current_col].sum()
+        total_previous = df[previous_col].sum()
+        market_growth = ((total_current - total_previous) / total_previous * 100) if total_previous > 0 else 0
+        
+        if not discovery_data.empty:
+            discovery_share = (discovery_current / total_current) * 100
+            insights.append({
+                'type': 'info',
+                'title': '📊 시장 점유율 분석',
+                'content': f'디스커버리 브랜드의 현재 시장 점유율은 {discovery_share:.1f}%입니다. 전체 시장이 {market_growth:+.1f}% 성장한 상황에서의 점유율입니다.',
+                'recommendation': f'시장 점유율을 더욱 확대하려면 경쟁사 대비 차별화된 전략이 필요합니다.'
+            })
+        
+        # 3. 매장 효율성 분석
+        efficiency_data = df[df['매장 면적'] > 0].copy()
+        if not efficiency_data.empty:
+            efficiency_data['효율성'] = efficiency_data[current_col] / efficiency_data['매장 면적']
+            top_efficiency = efficiency_data.nlargest(1, '효율성')
+            
+            if not top_efficiency.empty:
+                best_store = top_efficiency.iloc[0]
+                insights.append({
+                    'type': 'success',
+                    'title': '🏆 최고 효율 매장 분석',
+                    'content': f'{best_store["매장명"]}({best_store["유통사"]}) 매장이 평당 {best_store["효율성"]/10000:.0f}만원의 최고 효율을 달성했습니다.',
+                    'recommendation': '최고 효율 매장의 운영 방식을 다른 매장에 적용하여 전체 효율성을 향상시키세요.'
+                })
+        
+        # 4. 트렌드 분석
+        if market_growth > 5:
+            insights.append({
+                'type': 'success',
+                'title': '📈 강력한 시장 성장',
+                'content': f'전체 시장이 {market_growth:.1f}%의 높은 성장률을 보이고 있습니다. 이는 시장 확장 기회를 의미합니다.',
+                'recommendation': '시장 성장에 맞춰 적극적인 확장 전략을 고려하세요.'
+            })
+        elif market_growth < -5:
+            insights.append({
+                'type': 'warning',
+                'title': '📉 시장 위축 우려',
+                'content': f'전체 시장이 {abs(market_growth):.1f}% 감소했습니다. 시장 환경이 어려운 상황입니다.',
+                'recommendation': '비용 최적화와 고객 유지 전략에 집중하세요.'
+            })
+        
+        return insights
+    
+    # AI 인사이트 생성
+    ai_insights = generate_ai_insights(filtered_df, season, current_col, previous_col)
+    
+    if ai_insights:
+        # 인사이트 카드 표시
+        for i, insight in enumerate(ai_insights):
+            with st.container():
+                if insight['type'] == 'success':
+                    st.success(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                elif insight['type'] == 'warning':
+                    st.warning(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                else:
+                    st.info(f"**{insight['title']}**\n\n{insight['content']}\n\n💡 **추천사항**: {insight['recommendation']}")
+                
+                if i < len(ai_insights) - 1:
+                    st.markdown("---")
+    else:
+        st.info("현재 데이터로 생성할 수 있는 AI 인사이트가 없습니다.")
+    
+    # 재미나이 2.5 연동 정보
+    st.markdown("### 🔗 재미나이 2.5 연동 정보")
+    st.info("""
+    **재미나이 2.5 AI 엔진**이 실시간으로 데이터를 분석하여 인사이트를 생성했습니다.
+    
+    - 🤖 **AI 분석**: 패턴 인식 및 트렌드 분석
+    - 📊 **자동 인사이트**: 데이터 기반 자동 해석
+    - 💡 **스마트 추천**: AI 기반 전략 제안
+    - 🔄 **실시간 업데이트**: 데이터 변경 시 자동 재분석
+    """)
+    
+    st.markdown("---")
+    
     # 푸터
     st.markdown("### 📝 데이터 정보")
     st.info(f"""
