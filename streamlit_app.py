@@ -527,30 +527,100 @@ def main():
     # 매장 면적 대비 매출 효율성
     efficiency_data = filtered_df[filtered_df['매장 면적'] > 0].copy()
     if not efficiency_data.empty:
-        if season == 'SS':
-            efficiency_data['효율성'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
-        else:
-            efficiency_data['효율성'] = efficiency_data['24FW'] / efficiency_data['매장 면적']  # 25FW가 없으므로 24FW 사용
+        # 현재 시즌과 이전 시즌의 평당 매출 계산
+        efficiency_data['25SS_평당매출'] = efficiency_data['25SS'] / efficiency_data['매장 면적']
+        efficiency_data['24SS_평당매출'] = efficiency_data['24SS'] / efficiency_data['매장 면적']
         
-        # 매장별 효율성 TOP 10
-        top_efficiency = efficiency_data.nlargest(10, '효율성')[['매장명', '유통사', '매장 면적', current_col, '효율성']]
+        # 평당 매출 기준으로 정렬 (25SS 기준)
+        efficiency_data = efficiency_data.sort_values('25SS_평당매출', ascending=False).reset_index(drop=True)
         
-        col1, col2 = st.columns(2)
+        # 이전 시즌 순위 계산 (24SS 기준)
+        prev_efficiency = efficiency_data.sort_values('24SS_평당매출', ascending=False).reset_index()
+        prev_rank_dict = {row['매장명']: idx + 1 for idx, row in prev_efficiency.iterrows()}
+        
+        # 순위 변동 계산
+        rank_changes = []
+        for i, row in efficiency_data.iterrows():
+            current_rank = i + 1
+            prev_rank = prev_rank_dict.get(row['매장명'], None)
+            
+            if prev_rank is None:
+                rank_changes.append(0)  # 새로 등장한 매장
+            else:
+                rank_changes.append(prev_rank - current_rank)  # 양수면 상승, 음수면 하락
+        
+        efficiency_data['순위변동'] = rank_changes
+        
+        # 순위 변동 포맷팅 함수
+        def format_rank_change_outlet(rank, change):
+            if change == 0:
+                return f"{rank}(-)"
+            elif change > 0:
+                return f"{rank}(▲{change})"
+            else:
+                return f"{rank}(▼{abs(change)})"
+        
+        # 신장률 계산 함수
+        def calculate_growth_rate(current, previous):
+            if previous == 0:
+                return 0
+            return ((current - previous) / previous) * 100
+        
+        # 테이블 데이터 준비
+        table_data = []
+        for i, row in efficiency_data.iterrows():
+            rank_change = rank_changes[i]
+            평당매출_신장률 = calculate_growth_rate(row['25SS_평당매출'], row['24SS_평당매출'])
+            총매출_신장률 = calculate_growth_rate(row['25SS'], row['24SS'])
+            
+            table_data.append({
+                '순위변동': format_rank_change_outlet(i + 1, rank_change),
+                '매장명': row['매장명'],
+                '유통사': row['유통사'],
+                '매장면적': f"{row['매장 면적']:.0f}㎡",
+                '25SS_평당매출': f"{row['25SS_평당매출']/10000:.0f}만원/㎡",
+                '24SS_평당매출': f"{row['24SS_평당매출']/10000:.0f}만원/㎡",
+                '평당매출_신장률': f"{평당매출_신장률:+.1f}%",
+                '25SS_총매출': f"{row['25SS']/100_000_000:.2f}억원",
+                '24SS_총매출': f"{row['24SS']/100_000_000:.2f}억원",
+                '총매출_신장률': f"{총매출_신장률:+.1f}%"
+            })
+        
+        # DataFrame 생성
+        efficiency_table = pd.DataFrame(table_data)
+        
+        # 디스커버리 매장 강조를 위한 스타일링
+        def highlight_discovery_outlet(row):
+            if row['유통사'] == '디스커버리':
+                return ['background-color: #FFE6E6'] * len(row)
+            return [''] * len(row)
+        
+        styled_efficiency_table = efficiency_table.style.apply(highlight_discovery_outlet, axis=1)
+        
+        # 테이블 표시
+        st.dataframe(styled_efficiency_table, use_container_width=True, hide_index=True)
+        
+        # 주요 지표 요약
+        st.subheader("📊 주요 지표")
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.subheader(f"매장 효율성 TOP 10 ({season}시즌)")
-            st.dataframe(top_efficiency, use_container_width=True)
+            st.metric("분석 매장 수", f"{len(efficiency_data)}개")
         
         with col2:
-            # 효율성 분포 히스토그램
-            fig_hist = px.histogram(
-                efficiency_data,
-                x='효율성',
-                title=f"매장 효율성 분포 ({season}시즌)",
-                labels={'효율성': f'{season}시즌 매출/면적 (원/㎡)', 'count': '매장 수'}
-            )
-            fig_hist.update_layout(height=400)
-            st.plotly_chart(fig_hist, use_container_width=True)
+            avg_efficiency_25 = efficiency_data['25SS_평당매출'].mean()
+            st.metric("25SS 평균 평당매출", f"{avg_efficiency_25/10000:.0f}만원/㎡")
+        
+        with col3:
+            avg_efficiency_24 = efficiency_data['24SS_평당매출'].mean()
+            efficiency_growth = ((avg_efficiency_25 - avg_efficiency_24) / avg_efficiency_24 * 100) if avg_efficiency_24 > 0 else 0
+            st.metric("평당매출 성장률", f"{efficiency_growth:+.1f}%")
+        
+        with col4:
+            # 디스커버리 매장 수
+            discovery_stores = len(efficiency_data[efficiency_data['유통사'] == '디스커버리'])
+            st.metric("디스커버리 매장", f"{discovery_stores}개")
+        
     else:
         st.warning("매장 면적 데이터가 있는 매장이 없습니다.")
     
