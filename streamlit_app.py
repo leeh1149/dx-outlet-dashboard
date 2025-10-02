@@ -414,7 +414,7 @@ def main():
                 textinfo='percent+label',
                 hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>',
                 marker_line=dict(width=2, color='white'),
-                textfont=dict(size=12)
+                textfont=dict(size=12, color='black')  # 모든 텍스트를 검은색으로 설정
             )
             
             # 디스커버리 부분만 더 두꺼운 테두리 및 굵은 글씨 적용
@@ -424,7 +424,7 @@ def main():
                     fig_pie.data[0].marker.line.color = ['red' if j == i else 'white' for j in range(len(chart_data_current))]
                     # 디스커버리 텍스트를 굵게 표시
                     fig_pie.data[0].textfont.size = [16 if j == i else 12 for j in range(len(chart_data_current))]
-                    fig_pie.data[0].textfont.color = ['black' if j == i else 'white' for j in range(len(chart_data_current))]
+                    fig_pie.data[0].textfont.color = ['black'] * len(chart_data_current)  # 모든 텍스트를 검은색으로
             
             fig_pie.update_layout(height=500)
             st.plotly_chart(fig_pie, use_container_width=True)
@@ -541,27 +541,27 @@ def main():
             total_current_formatted = f"{total_current/100_000_000:.2f}억원"
             total_previous_formatted = f"{total_previous/100_000_000:.2f}억원"
         
-        total_row = {
+        # 합계 행을 테이블 데이터에 직접 추가
+        table_data.append({
             '순위변동': '',
-            '브랜드': '**합계**',
-            current_col_name: f"**{total_current_formatted}**",
-            previous_col_name: f"**{total_previous_formatted}**",
-            '증감률': f"**{total_growth:+.1f}%**"
-        }
+            '브랜드': '합계',
+            current_col_name: total_current_formatted,
+            previous_col_name: total_previous_formatted,
+            '증감률': f"{total_growth:+.1f}%"
+        })
         
-        # 합계 행을 DataFrame에 추가
-        total_df = pd.DataFrame([total_row])
-        table_with_total = pd.concat([table_df, total_df], ignore_index=True)
+        # 최종 DataFrame 생성
+        final_table_df = pd.DataFrame(table_data)
         
-        # 디스커버리 행 강조를 위한 스타일링
+        # 디스커버리와 합계 행 강조를 위한 스타일링
         def highlight_discovery_and_total(row):
             if row['브랜드'] == '디스커버리':
                 return ['background-color: #FFE6E6'] * len(row)
-            elif row['브랜드'] == '**합계**':
+            elif row['브랜드'] == '합계':
                 return ['background-color: #E6F3FF', 'font-weight: bold'] * len(row)
             return [''] * len(row)
         
-        styled_table = table_with_total.style.apply(highlight_discovery_and_total, axis=1)
+        styled_table = final_table_df.style.apply(highlight_discovery_and_total, axis=1)
         st.dataframe(styled_table, use_container_width=True, hide_index=True)
     
     else:
