@@ -87,6 +87,11 @@ def main():
         discovery_previous = 0
         discovery_growth = 0
         
+        # 변수 초기화
+        discovery_stores = pd.Series(dtype=int)
+        top_distributor = None
+        top_distributor_stores = 0
+        
         if not discovery_data.empty:
             discovery_current = discovery_data[current_col].sum()
             discovery_previous = discovery_data[previous_col].sum()
