@@ -82,8 +82,8 @@ def main():
         current_col = '24FW'  # 25FW가 없으므로 24FW 사용
         previous_col = '23FW'
     
-    # 1. AI 인사이트 (재미나이 2.5 연동)
-    st.subheader("🤖 AI 인사이트 - 재미나이 2.5")
+    # 1. AI 인사이트
+    st.subheader("🤖 AI 인사이트")
     
     # AI 인사이트 분석 함수
     def generate_ai_insights(df, season, current_col, previous_col):
@@ -230,10 +230,10 @@ def main():
     else:
         st.info("현재 데이터로 생성할 수 있는 AI 인사이트가 없습니다.")
     
-    # 재미나이 2.5 연동 정보
-    st.markdown("### 🔗 재미나이 2.5 연동 정보")
+    # AI 분석 정보
+    st.markdown("### 🔗 AI 분석 정보")
     st.info("""
-    **재미나이 2.5 AI 엔진**이 실시간으로 데이터를 분석하여 인사이트를 생성했습니다.
+    **AI 엔진**이 실시간으로 데이터를 분석하여 인사이트를 생성했습니다.
     
     - 🤖 **AI 분석**: 패턴 인식 및 트렌드 분석
     - 📊 **자동 인사이트**: 데이터 기반 자동 해석
