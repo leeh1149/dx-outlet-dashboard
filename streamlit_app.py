@@ -142,9 +142,9 @@ def main():
         # 신장률 포맷팅 (색상과 아이콘)
         def format_growth_rate(value):
             if value > 0:
-                return f"<span style='color: #0066cc;'>▲ {value}%</span>"
+                return f"▲ {value}%"
             else:
-                return f"<span style='color: #cc0000;'>▼ {value}%</span>"
+                return f"▼ {value}%"
         
         # 순위 변동 계산 (전년 대비 순위 변화)
         # 전년 순위를 계산하기 위해 전년 데이터로 정렬
@@ -160,9 +160,9 @@ def main():
             if change == 0:
                 return f"{rank}(-)"
             elif change > 0:
-                return f"{rank}(<span style='color: #cc0000;'>▼{change}</span>)"
+                return f"{rank}(▼{change})"
             else:
-                return f"{rank}(<span style='color: #0066cc;'>▲{abs(change)}</span>)"
+                return f"{rank}(▲{abs(change)})"
         
         result_df['순위변동표시'] = result_df.apply(lambda x: format_rank_change(x['순위'], x['순위변동']), axis=1)
         
@@ -185,52 +185,23 @@ def main():
         
         display_df = result_df[display_columns]
         
-        # HTML 테이블로 표시 (색상 적용)
-        def create_styled_table(data):
-            html = f"""
-            <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
-            <thead>
-                <tr style="background-color: #f0f2f6;">
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">순위</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">유통사</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">매장수</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 총 매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 총 매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">총매출 신장률</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{season}시즌 평균매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">전년{season}시즌 평균매출</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">평균매출 신장률</th>
-                </tr>
-            </thead>
-            <tbody>
-            """
-            
-            for _, row in data.iterrows():
-                html += f"""
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{row['순위변동표시']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">{row['유통사']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{int(row['매장수'])}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 총 매출']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 총 매출']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{row['총매출 신장률']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'{season}시즌 평균매출']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{row[f'전년{season}시즌 평균매출']}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">{row['평균매출 신장률']}</td>
-                </tr>
-                """
-            
-            html += """
-            </tbody>
-            </table>
-            </div>
-            """
-            
-            return html
-        
-        # HTML 테이블 표시
-        st.markdown(create_styled_table(display_df), unsafe_allow_html=True)
+        # Streamlit 데이터프레임으로 표시
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "순위변동표시": st.column_config.TextColumn("순위", help="순위 및 전년 대비 변동"),
+                "유통사": st.column_config.TextColumn("유통사", help="유통사명"),
+                "매장수": st.column_config.NumberColumn("매장수", help="매장 개수"),
+                f"{season}시즌 총 매출": st.column_config.TextColumn(f"{season}시즌 총 매출", help=f"{season}시즌 총 매출액 (억원)"),
+                f"전년{season}시즌 총 매출": st.column_config.TextColumn(f"전년{season}시즌 총 매출", help=f"전년 {season}시즌 총 매출액 (억원)"),
+                "총매출 신장률": st.column_config.TextColumn("총매출 신장률", help="총매출 증감률"),
+                f"{season}시즌 평균매출": st.column_config.TextColumn(f"{season}시즌 평균매출", help=f"{season}시즌 매장당 평균 매출 (억원)"),
+                f"전년{season}시즌 평균매출": st.column_config.TextColumn(f"전년{season}시즌 평균매출", help=f"전년 {season}시즌 매장당 평균 매출 (억원)"),
+                "평균매출 신장률": st.column_config.TextColumn("평균매출 신장률", help="평균매출 증감률")
+            }
+        )
     else:
         st.warning("선택한 조건에 해당하는 디스커버리 브랜드 데이터가 없습니다.")
     
