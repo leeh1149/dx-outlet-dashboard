@@ -142,9 +142,9 @@ def main():
         # 신장률 포맷팅 (색상과 아이콘)
         def format_growth_rate(value):
             if value > 0:
-                return f"▲ {value}%"
+                return f"🔵 ▲ {value}%"
             else:
-                return f"▼ {value}%"
+                return f"🔴 ▼ {value}%"
         
         # 순위 변동 계산 (전년 대비 순위 변화)
         # 전년 순위를 계산하기 위해 전년 데이터로 정렬
@@ -160,9 +160,9 @@ def main():
             if change == 0:
                 return f"{rank}(-)"
             elif change > 0:
-                return f"{rank}(▼{change})"
+                return f"{rank}(🔴▼{change})"
             else:
-                return f"{rank}(▲{abs(change)})"
+                return f"{rank}(🔵▲{abs(change)})"
         
         result_df['순위변동표시'] = result_df.apply(lambda x: format_rank_change(x['순위'], x['순위변동']), axis=1)
         
