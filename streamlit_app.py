@@ -244,33 +244,132 @@ def main():
         current_col = '24FW'  # 25FW가 없으므로 24FW 사용
         previous_col = '23FW'
     
-    # 브랜드별 매출 비교
-    brand_comparison = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+    # 브랜드별 매출 비교 (최근 시즌과 직전 시즌)
+    brand_comparison_current = filtered_df.groupby('브랜드')[current_col].sum().sort_values(ascending=False).head(10)
+    brand_comparison_previous = filtered_df.groupby('브랜드')[previous_col].sum()
     
-    if not brand_comparison.empty:
+    if not brand_comparison_current.empty:
+        # 디스커버리 강조를 위한 색상 설정
+        colors = []
+        for brand in brand_comparison_current.index:
+            if brand == '디스커버리':
+                colors.append('#FF6B6B')  # 빨간색으로 강조
+            else:
+                colors.append('#4ECDC4')  # 기본 색상
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            # 바 차트
-            fig = px.bar(
-                x=brand_comparison.values,
-                y=brand_comparison.index,
-                orientation='h',
-                title=f"브랜드별 {season}시즌 매출 TOP 10",
-                labels={'x': f'{season}시즌 매출 (원)', 'y': '브랜드'}
+            # 최근 시즌과 직전 시즌 비교 바 차트
+            comparison_data = []
+            for brand in brand_comparison_current.index:
+                current_val = brand_comparison_current[brand]
+                previous_val = brand_comparison_previous.get(brand, 0)
+                comparison_data.append({
+                    '브랜드': brand,
+                    '현재시즌': current_val,
+                    '전년시즌': previous_val
+                })
+            
+            comparison_df = pd.DataFrame(comparison_data)
+            
+            fig = go.Figure()
+            
+            # 전년 시즌 바
+            fig.add_trace(go.Bar(
+                name=f'전년{season}시즌',
+                x=comparison_df['브랜드'],
+                y=comparison_df['전년시즌'],
+                marker_color='lightblue',
+                opacity=0.7
+            ))
+            
+            # 현재 시즌 바 (디스커버리 강조)
+            current_colors = []
+            for brand in comparison_df['브랜드']:
+                if brand == '디스커버리':
+                    current_colors.append('#FF6B6B')
+                else:
+                    current_colors.append('#4ECDC4')
+            
+            fig.add_trace(go.Bar(
+                name=f'{season}시즌',
+                x=comparison_df['브랜드'],
+                y=comparison_df['현재시즌'],
+                marker_color=current_colors,
+                opacity=0.9
+            ))
+            
+            fig.update_layout(
+                title=f"브랜드별 {season}시즌 vs 전년{season}시즌 매출 비교 TOP 10",
+                xaxis_title="브랜드",
+                yaxis_title="매출 (원)",
+                barmode='group',
+                height=500,
+                showlegend=True
             )
-            fig.update_layout(height=500)
+            
+            # x축 레이블 회전
+            fig.update_xaxes(tickangle=45)
+            
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            # 파이 차트
+            # 파이 차트 (디스커버리 강조)
+            pie_colors = []
+            for brand in brand_comparison_current.index:
+                if brand == '디스커버리':
+                    pie_colors.append('#FF6B6B')  # 빨간색으로 강조
+                else:
+                    pie_colors.append('#4ECDC4')  # 기본 색상
+            
             fig_pie = px.pie(
-                values=brand_comparison.values,
-                names=brand_comparison.index,
-                title=f"브랜드별 {season}시즌 매출 비중"
+                values=brand_comparison_current.values,
+                names=brand_comparison_current.index,
+                title=f"브랜드별 {season}시즌 매출 비중 TOP 10",
+                color_discrete_sequence=pie_colors
             )
+            
+            # 디스커버리 부분 강조 (두꺼운 테두리)
+            fig_pie.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                hovertemplate='<b>%{label}</b><br>매출: %{value:,.0f}원<br>비중: %{percent}<extra></extra>'
+            )
+            
             fig_pie.update_layout(height=500)
             st.plotly_chart(fig_pie, use_container_width=True)
+        
+        # 디스커버리 성과 요약
+        if '디스커버리' in brand_comparison_current.index:
+            discovery_current = brand_comparison_current['디스커버리']
+            discovery_previous = brand_comparison_previous.get('디스커버리', 0)
+            discovery_growth = ((discovery_current - discovery_previous) / discovery_previous * 100) if discovery_previous > 0 else 0
+            
+            st.subheader("🎯 디스커버리 브랜드 성과")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    f"{season}시즌 매출", 
+                    f"{discovery_current/100_000_000:.2f}억원",
+                    delta=f"{discovery_growth:.1f}%"
+                )
+            
+            with col2:
+                discovery_rank = list(brand_comparison_current.index).index('디스커버리') + 1
+                st.metric("브랜드 순위", f"{discovery_rank}위")
+            
+            with col3:
+                discovery_share = (discovery_current / brand_comparison_current.sum()) * 100
+                st.metric("시장 점유율", f"{discovery_share:.1f}%")
+            
+            with col4:
+                if discovery_growth > 0:
+                    st.metric("성장률", f"🟢 ▲ {discovery_growth:.1f}%")
+                else:
+                    st.metric("성장률", f"🔴 ▼ {discovery_growth:.1f}%")
+    
     else:
         st.warning("선택한 조건에 해당하는 브랜드 데이터가 없습니다.")
     
